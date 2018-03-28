@@ -90,6 +90,12 @@ class Quest(object):
                               self.payload)
         return packet
 
+class AsyncCallback(object):
+    def __init__(self, cb, answer, exception):
+        self.cb = cb
+        self.answer = answer
+        self.exception = exception
+
 class TCPClient(object):
 
     def __init__(self, ip, port, autoReconnect = True, timeout=5):
@@ -108,7 +114,11 @@ class TCPClient(object):
         self.cTimer = None
         self.connectCb = None
         self.closeCb = None
+        self.asyncCallbackQueue = Queue.Queue(maxsize = 0)
+        self.asyncCallbackQueueLock = threading.Lock()
+        self.asyncCallbackThreadPool = []
         self.autoReconnect = autoReconnect
+        self.startAsyncCallbackThread()
         self.startCheckTimeoutTimer()
 
     def __del__(self):
@@ -117,6 +127,8 @@ class TCPClient(object):
             self.rThread.join()
         if self.cTimer != None:
             self.cTimer.cancel()
+        for t in self.asyncCallbackThreadPool:
+            t.join()
 
     def setConnectionConnectedCallback(self, cb):
         self.connectCb = cb
@@ -129,6 +141,13 @@ class TCPClient(object):
             self.rThread = threading.Thread(target=TCPClient.receiveThread, args=(self,))
             self.rThread.setDaemon(True)
             self.rThread.start()
+
+    def startAsyncCallbackThread(self):
+        for i in range(0, 3):
+            t = threading.Thread(target=TCPClient.callAsyncCallback, args=(self,))
+            t.setDaemon(True)
+            t.start()
+            self.asyncCallbackThreadPool.append(t)
 
     def startCheckTimeoutTimer(self):
         if self.cTimer == None:
@@ -158,6 +177,9 @@ class TCPClient(object):
         if self.cTimer != None:
             self.cTimer.cancel()
             self.cTimer = None
+        for t in self.asyncCallbackThreadPool:
+            t.join()
+        self.asyncCallbackThreadPool = []
 
     def putCb(self, seqNum, cb):
         with self.dictLock:
@@ -267,6 +289,20 @@ class TCPClient(object):
                 break
         return buffer 
 
+    def callAsyncCallback(self):
+        while (not self.stop):
+            ac = None
+            try:
+                ac = self.asyncCallbackQueue.get(False)
+            except Exception, e:
+                if self.stop:
+                    break
+                else:
+                    time.sleep(0.2)
+                    continue
+
+            ac.cb.callback(ac.answer, ac.exception)
+
     def receiveThread(self):
         while (not self.stop):
             try:
@@ -374,7 +410,8 @@ class TCPClient(object):
     def invokeCallback(self, cb, answer, exception):
         if cb != None:
             if cb.syncSemaphore == None:
-                cb.callback(answer, exception)
+                with self.asyncCallbackQueueLock:
+                    self.asyncCallbackQueue.put(AsyncCallback(cb, answer, exception))
             else:
                 cb.syncAnswer = answer 
                 cb.syncException = exception 

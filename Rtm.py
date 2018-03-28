@@ -330,7 +330,7 @@ class RTMServerClient:
         return hashlib.md5(str(self.pid) + ':' + self.secretKey + ':' +
                 str(salt)).hexdigest().upper()
 
-    def sendMessageSync(self, fromUid, to, mtype, msg, attrs):
+    def sendMessageSync(self, fromUid, toUid, mtype, msg, attrs):
         salt = self.genSalt()
         self.client.sendQuestSync('sendmsg', {
             'pid' : self.pid,
@@ -338,13 +338,13 @@ class RTMServerClient:
             'salt' : salt,
             'mtype' : mtype,
             'from' : fromUid,
-            'to' : to,
+            'to' : toUid,
             'mid' : self.genMid(),
             'msg' : msg,
             'attrs' : attrs
         })
 
-    def sendMessage(self, fromUid, to, mtype, msg, attrs, cb):
+    def sendMessage(self, fromUid, toUid, mtype, msg, attrs, cb):
         salt = self.genSalt()
         self.client.sendQuest('sendmsg', {
             'pid' : self.pid,
@@ -352,13 +352,13 @@ class RTMServerClient:
             'salt' : salt,
             'mtype' : mtype,
             'from' : fromUid,
-            'to' : to,
+            'to' : toUid,
             'mid' : self.genMid(),
             'msg' : msg,
             'attrs' : attrs
         }, DoneCallbackInternal(cb))
 
-    def sendMessagesSync(self, fromUid, tos, mtype, msg, attrs):
+    def sendMessagesSync(self, fromUid, toUids, mtype, msg, attrs):
         salt = self.genSalt()
         self.client.sendQuestSync("sendmsgs", { 
             'pid' : self.pid,
@@ -366,13 +366,13 @@ class RTMServerClient:
             'salt' : salt,
             'mtype' : mtype,
             'from' : fromUid,
-            'tos' : tos,
+            'tos' : toUids,
             'mid' : self.genMid(),
             'msg' : msg,
             'attrs' : attrs
         })
 
-    def sendMessages(self, fromUid, tos, mtype, msg, attrs, cb):
+    def sendMessages(self, fromUid, toUids, mtype, msg, attrs, cb):
         salt = self.genSalt()
         self.client.sendQuest("sendmsgs", { 
             'pid' : self.pid,
@@ -380,7 +380,7 @@ class RTMServerClient:
             'salt' : salt,
             'mtype' : mtype,
             'from' : fromUid,
-            'tos' : tos,
+            'tos' : toUids,
             'mid' : self.genMid(),
             'msg' : msg,
             'attrs' : attrs

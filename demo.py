@@ -10,12 +10,12 @@ class MyDoneCallback(DoneCallback):
         print repr(exception)
 
 def main():
-    client = RTMServerClient(1000001, '3a0023b6-bc80-488d-b312-c4a139b5ab1a',
-            '10.63.2.47:13315')
+    client = RTMServerClient(1000008, 'test-key',
+            '117.50.4.158:13315')
 
-    client.sendMsg(1, 123, 51, "test msg", "test attrs", MyDoneCallback())
+    client.sendMessage(1, 2, 51, "test msg", "test attrs", MyDoneCallback())
 
-    time.sleep(2)
+    time.sleep(1)
     client.close()
 
 if __name__ == '__main__':
