@@ -10,7 +10,7 @@ class MyDoneCallback(DoneCallback):
         print repr(exception)
 
 def main():
-    client = RTMServerClient(11000006, '3f35e98f-529b-4633-8a93-8feed41682de', '52.83.245.22:13315')
+    client = RTMServerClient(11000006, 'xxxxx-xxxx-xxxx-xxx-xxxxxx', '52.83.245.22:13315')
 
     client.sendMessage(1, 2, 51, "test msg", "test attrs", MyDoneCallback())
 
