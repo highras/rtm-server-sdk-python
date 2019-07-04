@@ -300,11 +300,10 @@ class GetGeosCallbackInternal(Fpnn.FpnnCallback):
 
 
 class RTMServerClient:
+    seq = 0
+    seqLock = threading.Lock()
+
     def __init__(self, pid, secretKey, endpoint, timeout=5):
-        self.midSeqLock = threading.Lock()
-        self.midSeq = 0
-        self.saltSeqLock = threading.Lock()
-        self.saltSeq = 0
         arr = endpoint.split(':')
         self.pid = pid
         self.secretKey = secretKey
@@ -313,25 +312,30 @@ class RTMServerClient:
     def close(self):
         self.client.close()
 
+    def setConnectionConnectedCallback(self, cb):
+        self.client.setConnectionConnectedCallback(cb)
+
+    def setConnectionWillCloseCallback(self, cb):
+        self.client.setConnectionWillCloseCallback(cb)
+
     def enableEncryptor(self, peerPubData):
         self.client.enableEncryptor(peerPubData)
 
-    def genMid(self):
-        with self.midSeqLock:
-            self.midSeq += 1
-            return (int(time.time()) << 32) + (self.midSeq & 0xffffff)
-
-    def genSalt(self):
-        with self.saltSeqLock:
-            self.saltSeq += 1
-            return (int(time.time()) << 32) + (self.saltSeq & 0xffffff)
+    def genId(self):
+        s = 0
+        with self.seqLock:
+            if ++self.seq >= 999:
+                self.seq = 0
+        s = self.seq
+        tms = (int(round(time.time() * 1000)))
+        return int(str(tms) + str(s))
 
     def genSign(self, salt):
         return hashlib.md5(str(self.pid) + ':' + self.secretKey + ':' +
                 str(salt)).hexdigest().upper()
 
     def sendMessageSync(self, fromUid, toUid, mtype, msg, attrs):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuestSync('sendmsg', {
             'pid' : self.pid,
             'sign' : self.genSign(salt),
@@ -339,13 +343,13 @@ class RTMServerClient:
             'mtype' : mtype,
             'from' : fromUid,
             'to' : toUid,
-            'mid' : self.genMid(),
+            'mid' : self.genId(),
             'msg' : msg,
             'attrs' : attrs
         })
 
     def sendMessage(self, fromUid, toUid, mtype, msg, attrs, cb):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuest('sendmsg', {
             'pid' : self.pid,
             'sign' : self.genSign(salt),
@@ -353,13 +357,13 @@ class RTMServerClient:
             'mtype' : mtype,
             'from' : fromUid,
             'to' : toUid,
-            'mid' : self.genMid(),
+            'mid' : self.genId(),
             'msg' : msg,
             'attrs' : attrs
         }, DoneCallbackInternal(cb))
 
     def sendMessagesSync(self, fromUid, toUids, mtype, msg, attrs):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuestSync("sendmsgs", { 
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -367,13 +371,13 @@ class RTMServerClient:
             'mtype' : mtype,
             'from' : fromUid,
             'tos' : toUids,
-            'mid' : self.genMid(),
+            'mid' : self.genId(),
             'msg' : msg,
             'attrs' : attrs
         })
 
     def sendMessages(self, fromUid, toUids, mtype, msg, attrs, cb):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuest("sendmsgs", { 
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -381,13 +385,13 @@ class RTMServerClient:
             'mtype' : mtype,
             'from' : fromUid,
             'tos' : toUids,
-            'mid' : self.genMid(),
+            'mid' : self.genId(),
             'msg' : msg,
             'attrs' : attrs
         }, DoneCallbackInternal(cb))
 
     def sendGroupMessageSync(self, fromUid, gid, mtype, msg, attrs):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuestSync("sendgroupmsg", { 
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -395,13 +399,13 @@ class RTMServerClient:
             'mtype' : mtype,
             'from' : fromUid,
             'gid' : gid,
-            'mid' : self.genMid(),
+            'mid' : self.genId(),
             'msg' : msg,
             'attrs' : attrs
         })
 
     def sendGroupMessage(self, fromUid, gid, mtype, msg, attrs, cb):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuest("sendgroupmsg", { 
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -409,13 +413,13 @@ class RTMServerClient:
             'mtype' : mtype,
             'from' : fromUid,
             'gid' : gid,
-            'mid' : self.genMid(),
+            'mid' : self.genId(),
             'msg' : msg,
             'attrs' : attrs
         }, DoneCallbackInternal(cb))
 
     def sendRoomMessageSync(self, fromUid, rid, mtype, msg, attrs):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuestSync("sendroommsg", { 
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -423,13 +427,13 @@ class RTMServerClient:
             'mtype' : mtype,
             'from' : fromUid,
             'rid' : rid,
-            'mid' : self.genMid(),
+            'mid' : self.genId(),
             'msg' : msg,
             'attrs' : attrs
         })
 
     def sendRoomMessage(self, fromUid, rid, mtype, msg, attrs, cb):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuest("sendroommsg", { 
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -437,39 +441,39 @@ class RTMServerClient:
             'mtype' : mtype,
             'from' : fromUid,
             'rid' : rid,
-            'mid' : self.genMid(),
+            'mid' : self.genId(),
             'msg' : msg,
             'attrs' : attrs
         }, DoneCallbackInternal(cb))
 
     def broadcastMessageSync(self, fromUid, mtype, msg, attrs):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuestSync("broadcastmsg", { 
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
             'salt' : salt,
             'mtype' : mtype,
             'from' : fromUid,
-            'mid' : self.genMid(),
+            'mid' : self.genId(),
             'msg' : msg,
             'attrs' : attrs
         })
 
     def broadcastMessage(self, fromUid, mtype, msg, attrs, cb):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuest("broadcastmsg", { 
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
             'salt' : salt,
             'mtype' : mtype,
             'from' : fromUid,
-            'mid' : self.genMid(),
+            'mid' : self.genId(),
             'msg' : msg,
             'attrs' : attrs
         }, DoneCallbackInternal(cb))
 
     def addfriendsSync(self, uid, friends):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuestSync("addfriends", {
             'pid' : self.pid,
             'sign' : self.genSign(salt),
@@ -479,7 +483,7 @@ class RTMServerClient:
         })
 
     def addfriends(self, uid, friends, cb): 
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuest("addfriends", {
             'pid' : self.pid,
             'sign' : self.genSign(salt),
@@ -489,7 +493,7 @@ class RTMServerClient:
         }, DoneCallbackInternal(cb))
 
     def deleteFriendsSync(self, uid, friends):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuestSync("delfriends", { 
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -499,7 +503,7 @@ class RTMServerClient:
         })
 
     def deleteFriends(self, uid, friends, cb):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuest("delfriends", { 
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -509,7 +513,7 @@ class RTMServerClient:
         }, DoneCallbackInternal(cb))
 
     def getFriendsSync(self, uid):
-        salt = self.genSalt()
+        salt = self.genId()
         res = self.client.sendQuestSync("getfriends", {
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -522,7 +526,7 @@ class RTMServerClient:
             return []
 
     def getFriends(self, uid, cb):
-        salt = self.genSalt()
+        salt = self.genId()
         res = self.client.sendQuest("getfriends", {
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -531,7 +535,7 @@ class RTMServerClient:
         }, GetFriendsCallbackInternal(cb))
 
     def isFriendSync(self, uid, fuid):
-        salt = self.genSalt()
+        salt = self.genId()
         res = self.client.sendQuestSync("isfriend", { 
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -545,7 +549,7 @@ class RTMServerClient:
             return False
 
     def isFriend(self, uid, fuid, cb):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuest("isfriend", { 
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -555,7 +559,7 @@ class RTMServerClient:
         }, IsFriendCallbackInternal(cb))
 
     def isFriendsSync(self, uid, fuids):
-        salt = self.genSalt()
+        salt = self.genId()
         res = self.client.sendQuestSync("isfriends", {
             'pid' : self.pid,
             'sign' : self.genSign(salt),
@@ -569,7 +573,7 @@ class RTMServerClient:
             return []
 
     def isFriends(self, uid, fuids, cb):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuest("isfriends", {
             'pid' : self.pid,
             'sign' : self.genSign(salt),
@@ -579,7 +583,7 @@ class RTMServerClient:
         }, IsFriendsCallback(cb))
 
     def addGroupMembersSync(self, gid, uids):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuestSync("addgroupmembers", {
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -589,7 +593,7 @@ class RTMServerClient:
         })
 
     def addGroupMembers(self, gid, uids, cb):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuest("addgroupmembers", {
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -599,7 +603,7 @@ class RTMServerClient:
         }, DoneCallbackInternal(cb))
 
     def deleteGroupMembersSync(self, gid, uids):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuestSync("delgroupmembers", {
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -609,7 +613,7 @@ class RTMServerClient:
         })
 
     def deleteGroupMembers(self, gid, uids, cb):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuest("delgroupmembers", {
             'pid' : self.pid,
             'sign' : self.genSign(salt),
@@ -619,7 +623,7 @@ class RTMServerClient:
         }, DoneCallbackInternal(cb))
 
     def deleteGroupSync(self, gid):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuestSync("delgroup", { 
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -628,7 +632,7 @@ class RTMServerClient:
         })
 
     def deleteGroup(self, gid):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuest("delgroup", { 
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -637,7 +641,7 @@ class RTMServerClient:
         }, DoneCallbackInternal(cb))
 
     def getGroupMembersSync(self, gid):
-        salt = self.genSalt()
+        salt = self.genId()
         res = self.client.sendQuestSync("getgroupmembers", {
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -650,7 +654,7 @@ class RTMServerClient:
             return []
 
     def getGroupMembers(self, gid, cb):
-        salt = self.genSalt()
+        salt = self.genId()
         res = self.client.sendQuest("getgroupmembers", {
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -659,7 +663,7 @@ class RTMServerClient:
         }, GetGroupMembersCallbackInternal(cb))
 
     def isGroupMemberSync(self, gid, uid):
-        salt = self.genSalt()
+        salt = self.genId()
         res = self.client.sendQuestSync("isgroupmember", {
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -673,7 +677,7 @@ class RTMServerClient:
             return False
 
     def isGroupMember(self, gid, uid, cb):
-        salt = self.genSalt()
+        salt = self.genId()
         res = self.client.sendQuest("isgroupmember", {
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -683,7 +687,7 @@ class RTMServerClient:
         }, IsGroupMemberCallbackInternal(cb))
 
     def getUserGroupsSync(self, uid):
-        salt = self.genSalt()
+        salt = self.genId()
         res = self.client.sendQuestSync("getusergroups", {
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -696,7 +700,7 @@ class RTMServerClient:
             return []
 
     def getUserGroups(self, uid, cb):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuest("getusergroups", {
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -705,7 +709,7 @@ class RTMServerClient:
         }, GetUserGroupsCallbackInternal(cb))
 
     def getTokenSync(self, uid):
-        salt = self.genSalt()
+        salt = self.genId()
         res = self.client.sendQuestSync("gettoken", {
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -718,7 +722,7 @@ class RTMServerClient:
             return ''
 
     def getToken(self, uid, cb):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuest("gettoken", {
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -727,7 +731,7 @@ class RTMServerClient:
         }, GetTokenCallbackInternal(cb))
 
     def getOnlineUsersSync(self, uids):
-        salt = self.genSalt()
+        salt = self.genId()
         res = self.client.sendQuestSync("getonlineusers", {
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -740,7 +744,7 @@ class RTMServerClient:
             return [] 
 
     def getOnlineUsers(self, uids, cb):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuest("getonlineusers", {
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -749,7 +753,7 @@ class RTMServerClient:
         }, GetOnlineUsersCallbackInternal(cb))
 
     def addGroupBanSync(self, gid, uid, btime):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuestSync("addgroupban", {
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -760,7 +764,7 @@ class RTMServerClient:
         })
 
     def addGroupBan(self, gid, uid, btime, cb):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuest("addgroupban", {
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -771,7 +775,7 @@ class RTMServerClient:
         }, DoneCallbackInternal(cb))
 
     def removeGroupBanSync(self, gid, uid):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuestSync("removegroupban", {
             'pid' :  self.pid,
             'sign' :  self.genSign(salt), 
@@ -781,7 +785,7 @@ class RTMServerClient:
         })
 
     def removeGroupBan(self, gid, uid, cb):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuest("removegroupban", {
             'pid' :  self.pid,
             'sign' :  self.genSign(salt), 
@@ -791,7 +795,7 @@ class RTMServerClient:
         }, DoneCallbackInternal(cb))
 
     def addRoomBanSync(self, rid, uid, btime):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuestSync("addroomban", {
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -802,7 +806,7 @@ class RTMServerClient:
         })
 
     def addRoomBan(self, rid, uid, btime, cb):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuest("addroomban", {
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -813,7 +817,7 @@ class RTMServerClient:
         }, DoneCallbackInternal(cb))
 
     def removeRoomBanSync(self, rid, uid): 
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuestSync("removeroomban", {
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -823,7 +827,7 @@ class RTMServerClient:
         })
 
     def removeRoomBan(self, rid, uid, cb):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuest("removeroomban", {
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -833,7 +837,7 @@ class RTMServerClient:
         }, DoneCallbackInternal(cb))
 
     def addProjectBlackSync(self, uid, btime):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuestSync("addprojectblack", {
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -843,7 +847,7 @@ class RTMServerClient:
         })
 
     def addProjectBlack(self, uid, btime, cb):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuest("addprojectblack", {
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -853,7 +857,7 @@ class RTMServerClient:
         }, DoneCallbackInternal(cb))
 
     def removeProjectBlackSync(self, uid):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuestSync("removeprojectblack", {
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -862,7 +866,7 @@ class RTMServerClient:
         })
 
     def removeProjectBlack(self, uid, cb):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuest("removeprojectblack", {
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -871,7 +875,7 @@ class RTMServerClient:
         }, DoneCallbackInternal(cb))
 
     def isBanOfGroupSync(self, gid, uid):
-        salt = self.genSalt()
+        salt = self.genId()
         res = self.client.sendQuestSync("isbanofgroup", {
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -885,7 +889,7 @@ class RTMServerClient:
             return False
 
     def isBanOfGroup(self, gid, uid, cb):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuest("isbanofgroup", {
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -895,7 +899,7 @@ class RTMServerClient:
         }, IsBanOfGroupCallbackInternal(cb))
 
     def isBanOfRoomSync(self, rid, uid):
-        salt = self.genSalt()
+        salt = self.genId()
         res = self.client.sendQuestSync("isbanofroom", {
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -909,7 +913,7 @@ class RTMServerClient:
             return False
 
     def isBanOfRoom(self, rid, uid, cb):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuest("isbanofroom", {
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -919,7 +923,7 @@ class RTMServerClient:
         }, IsBanOfRoomCallbackInternal(cb))
 
     def isProjectBlackSync(self, uid):
-        salt = self.genSalt()
+        salt = self.genId()
         res = self.client.sendQuestSync("isprojectblack", {
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
@@ -932,113 +936,11 @@ class RTMServerClient:
             return False
 
     def isProjectBlack(self, uid, cb):
-        salt = self.genSalt()
+        salt = self.genId()
         self.client.sendQuest("isprojectblack", {
             'pid' : self.pid,
             'sign' : self.genSign(salt), 
             'salt' : salt,
             'uid' : uid
         }, IsProjectBlackCallbackInternal(cb))
-
-    def setPushNameSync(self, uid, pushname):
-        salt = self.genSalt()
-        self.client.sendQuestSync("setpushname", {
-            'pid' : self.pid,
-            'sign' : self.genSign(salt), 
-            'salt' : salt,
-            'uid' : uid,
-            'pushname' : pushname
-        })
-
-    def setPushName(self, uid, pushname, cb):
-        salt = self.genSalt()
-        self.client.sendQuest("setpushname", {
-            'pid' : self.pid,
-            'sign' : self.genSign(salt), 
-            'salt' : salt,
-            'uid' : uid,
-            'pushname' : pushname
-        }, DoneCallbackInternal(cb))
-
-    def getPushNameSync(self, uid):
-        salt = self.genSalt()
-        res = self.client.sendQuestSync("getpushname", {
-            'pid' : self.pid,
-            'sign' : self.genSign(salt), 
-            'salt' : salt,
-            'uid' : uid
-        })
-        if res.has_key('pushname'):
-            return res['pushname']
-        else:
-            return ''
-
-    def getPushName(self, uid, cb):
-        salt = self.genSalt()
-        self.client.sendQuest("getpushname", {
-            'pid' : self.pid,
-            'sign' : self.genSign(salt), 
-            'salt' : salt,
-            'uid' : uid
-        }, GetPushNameCallbackInternal(cb))
-
-    def setGeoSync(self, uid, lat, lng):
-        salt = self.genSalt()
-        self.client.sendQuestSync("setgeo", {
-            'pid' : self.pid,
-            'sign' : self.genSign(salt), 
-            'salt' : salt,
-            'uid' : uid,
-            'lat' : lat,
-            'lng' : lng
-        })
-
-    def setGeo(self, uid, lat, lng, cb):
-        salt = self.genSalt()
-        self.client.sendQuest("setgeo", {
-            'pid' : self.pid,
-            'sign' : self.genSign(salt), 
-            'salt' : salt,
-            'uid' : uid,
-            'lat' : lat,
-            'lng' : lng
-        }, DoneCallbackInternal(cb))
-
-    def getGeoSync(self, uid):
-        salt = self.genSalt()
-        res = self.client.sendQuestSync("getgeo", {
-            'pid' : self.pid,
-            'sign' : self.genSign(salt), 
-            'salt' : salt,
-            'uid' : uid
-        })
-        return res
-
-    def getGeo(self, uid, cb):
-        salt = self.genSalt()
-        self.client.sendQuest("getgeo", {
-            'pid' : self.pid,
-            'sign' : self.genSign(salt), 
-            'salt' : salt,
-            'uid' : uid
-        }, GetGeoCallbackInternal(cb))
-
-    def getGeosSync(self, uids):
-        salt = self.genSalt()
-        res = self.client.sendQuestSync("getgeos", {
-            'pid' : self.pid,
-            'sign' : self.genSign(salt), 
-            'salt' : salt,
-            'uids' : uids
-        })
-        return res
-
-    def getGeos(self, uids, cb):
-        salt = self.genSalt()
-        self.client.sendQuest("getgeos", {
-            'pid' : self.pid,
-            'sign' : self.genSign(salt), 
-            'salt' : salt,
-            'uids' : uids
-        }, GetGeosCallbackInternal(cb))
 

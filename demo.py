@@ -10,10 +10,11 @@ class MyDoneCallback(DoneCallback):
         print repr(exception)
 
 def main():
-    client = RTMServerClient(1000008, 'test-key',
-            '117.50.4.158:13315')
+    client = RTMServerClient(11000006, '3f35e98f-529b-4633-8a93-8feed41682de', '52.83.245.22:13315')
 
     client.sendMessage(1, 2, 51, "test msg", "test attrs", MyDoneCallback())
+
+    print client.isBanOfRoomSync(1, 1)
 
     time.sleep(1)
     client.close()

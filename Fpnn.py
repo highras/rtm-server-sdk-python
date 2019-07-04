@@ -28,6 +28,10 @@ FPNN_MT_ANSWER = 2
 class FpnnCallback:
     timeoutSecond = 0
     createTime = 0
+
+    syncSemaphore = None
+    syncAnswer = answer = None
+    syncException = None
     
     def callback(self, answer, exception):
         pass
@@ -98,7 +102,7 @@ class AsyncCallback(object):
 
 class TCPClient(object):
 
-    def __init__(self, ip, port, autoReconnect = True, timeout=5):
+    def __init__(self, ip, port, autoReconnect = True, timeout = 5):
         self.socket = None
         self.timeout = timeout
         self.stop = False
@@ -110,25 +114,25 @@ class TCPClient(object):
         self.sockLock = threading.Lock()
         self.cbDict = {}
         self.dictLock = threading.Lock()
-        self.rThread = None
-        self.cTimer = None
+        self.readThread = None
+        self.execThread = None
+        self.checkTimer = None
         self.connectCb = None
         self.closeCb = None
         self.asyncCallbackQueue = Queue.Queue(maxsize = 0)
         self.asyncCallbackQueueLock = threading.Lock()
-        self.asyncCallbackThreadPool = []
         self.autoReconnect = autoReconnect
         self.startAsyncCallbackThread()
         self.startCheckTimeoutTimer()
 
     def __del__(self):
         self.stop = True
-        if self.rThread != None:
-            self.rThread.join()
-        if self.cTimer != None:
-            self.cTimer.cancel()
-        for t in self.asyncCallbackThreadPool:
-            t.join()
+        if self.readThread != None:
+            self.readThread.join()
+        if self.checkTimer != None:
+            self.checkTimer.cancel()
+        if self.execThread != None:
+            self.execThread.join()
 
     def setConnectionConnectedCallback(self, cb):
         self.connectCb = cb
@@ -137,22 +141,20 @@ class TCPClient(object):
         self.closeCb = cb
 
     def startReceiveThread(self):
-        if self.rThread == None:
-            self.rThread = threading.Thread(target=TCPClient.receiveThread, args=(self,))
-            self.rThread.setDaemon(True)
-            self.rThread.start()
+        if self.readThread == None:
+            self.readThread = threading.Thread(target=TCPClient.receiveThread, args=(self,))
+            self.readThread.setDaemon(True)
+            self.readThread.start()
 
     def startAsyncCallbackThread(self):
-        for i in range(0, 3):
-            t = threading.Thread(target=TCPClient.callAsyncCallback, args=(self,))
-            t.setDaemon(True)
-            t.start()
-            self.asyncCallbackThreadPool.append(t)
+        self.execThread = threading.Thread(target=TCPClient.asyncReadCallback, args=(self,))
+        self.execThread.setDaemon(True)
+        self.execThread.start()
 
     def startCheckTimeoutTimer(self):
-        if self.cTimer == None:
-            self.cTimer = threading.Timer(1, self.timeoutChecker)
-            self.cTimer.start()
+        if self.checkTimer == None:
+            self.checkTimer = threading.Timer(1, self.timeoutChecker)
+            self.checkTimer.start()
 
     def reconnect(self):
         with self.sockLock:
@@ -171,15 +173,15 @@ class TCPClient(object):
         with self.sockLock:
             if self.socket:
                 self.socket.close()
-        if self.rThread != None:
-            self.rThread.join()
-            self.rThread = None
-        if self.cTimer != None:
-            self.cTimer.cancel()
-            self.cTimer = None
-        for t in self.asyncCallbackThreadPool:
-            t.join()
-        self.asyncCallbackThreadPool = []
+        if self.readThread != None:
+            self.readThread.join()
+            self.readThread = None
+        if self.checkTimer != None:
+            self.checkTimer.cancel()
+            self.checkTimer = None
+        if self.execThread != None:
+            self.execThread.join()
+            self.execThread = None
 
     def putCb(self, seqNum, cb):
         with self.dictLock:
@@ -202,8 +204,8 @@ class TCPClient(object):
             if cb != None:
                 self.invokeCallback(cb, None, Exception("Quest timeout"))
          
-        self.cTimer = threading.Timer(1, self.timeoutChecker)
-        self.cTimer.start()
+        self.checkTimer = threading.Timer(1, self.timeoutChecker)
+        self.checkTimer.start()
 
     def isCallbackTimeout(self, cb):
         timeoutValue = self.timeout
@@ -267,7 +269,7 @@ class TCPClient(object):
 
     def sendAll(self, buffer):
         with self.sockLock:
-	        self.socket.sendall(buffer)
+            self.socket.sendall(buffer)
 
     def recvAll(self, data_len):
         buffer = b''
@@ -289,16 +291,15 @@ class TCPClient(object):
                 break
         return buffer 
 
-    def callAsyncCallback(self):
+    def asyncReadCallback(self):
         while (not self.stop):
             ac = None
             try:
-                ac = self.asyncCallbackQueue.get(False)
+                ac = self.asyncCallbackQueue.get(True, 0.2)
             except Exception, e:
                 if self.stop:
                     break
                 else:
-                    time.sleep(0.2)
                     continue
 
             ac.cb.callback(ac.answer, ac.exception)
@@ -347,13 +348,10 @@ class TCPClient(object):
                     break
 
         self.exceptionFlushAll()
-        self.rThread = None            
+        self.readThread = None            
 
     def sendQuest(self, method, params, cb = None, timeout = 0):
         if cb != None:
-            cb.syncSemaphore = None
-            cb.syncAnswer = None
-            cb.syncException = None
             cb.timeoutSecond = timeout
             cb.createTime = int(time.time()) 
 
@@ -367,7 +365,7 @@ class TCPClient(object):
         cb.timeoutSecond = timeout
         cb.createTime = int(time.time())
         self.send(method, params, cb)
-        
+     
         cb.syncSemaphore.acquire()
       
         if cb.syncException == None:
@@ -413,8 +411,8 @@ class TCPClient(object):
                 with self.asyncCallbackQueueLock:
                     self.asyncCallbackQueue.put(AsyncCallback(cb, answer, exception))
             else:
-                cb.syncAnswer = answer 
-                cb.syncException = exception 
+                cb.syncAnswer = answer
+                cb.syncException = exception
                 cb.syncSemaphore.release()
 
     def exceptionFlushAll(self):
