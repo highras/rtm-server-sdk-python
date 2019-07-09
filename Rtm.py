@@ -631,7 +631,7 @@ class RTMServerClient:
             'gid' : gid
         })
 
-    def deleteGroup(self, gid):
+    def deleteGroup(self, gid, cb):
         salt = self.genId()
         self.client.sendQuest("delgroup", { 
             'pid' : self.pid,
