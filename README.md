@@ -1,112 +1,219 @@
-# rtm-server-sdk-python
+# RTM Server-End Python SDK
 
-#### 例子 ####
+[TOC]
+
+## Depends
+
+* Python 3+
+* selectors
+* msgpack
+* cryptography
+
+
+
+## Use
+
 ```python
+import sys
+sys.path.append("/path/to/rtm")
+from rtm import *
+```
 
-client = RTMServerClient(11000006, 'xxxxx-xxxx-xxxx-xxx-xxxxxx', '52.83.245.22:13315')
 
-class MyDoneCallback(DoneCallback):
-    def done(self):
-        print("done")
+
+## Notice
+
+**Before using the SDK, please make sure the server time is correct, RTM-Server will check whether the signature time has expired**
+
+
+
+## Usage
+
+### Create RTMClient
+
+```python
+client = RTMServerClient(pid, secret, endpoint, auto_reconnect, quest_timeout_microseconds)
+```
+
+* please get your project params from RTM Console.
+* **auto_reconnect** means establishing the connection in implicit or explicit. NOT keep the connection.
+
+
+
+### Configure (Optional)
+
+#### set_quest_timeout
+
+```python
+client.set_quest_timeout(timeout)
+```
+
+* timeout is in **microseconds**, this api can set the global quest timeout, you can also set a timeout for each request individually
+
+
+
+#### set_connection_callback
+
+```python
+client.set_connection_callback(callback)
+```
+
+* the callback is a sub-class of ConnectionCallback, you can use it like this:
+
+```python
+class MyConnectionCallback(ConnectionCallback):
+    def connected(self, connection_id, endpoint):
+        print("connected")
+        print(connection_id)
+        print(endpoint)
+
+    def closed(self, connection_id, endpoint, caused_by_error):
+        print("closed")
+        print(connection_id)
+        print(endpoint)
+        print(caused_by_error)
+
+client.set_connection_callback(MyConnectionCallback())
+```
+
+
+
+#### enable_encryptor_by_pem_file
+
+```python
+client.enable_encryptor_by_pem_file(pem_pub_file, curve_name, strength)
+```
+
+* RTM Server-End Python SDK using **ECC**/**ECDH** to exchange the secret key, and using **AES-128** or **AES-256** in **CFB** mode to encrypt the whole session in **stream** way.
+
+
+
+#### set_quest_processor
+
+```python
+client.set_quest_processor(processor)
+```
+
+* set the server quest processor to get the event and message forward from the RTM-Server, you can see the detailed usage in the Listening section below
+
+
+
+## API
+
+### common params
+
+* each api has two common params: callback and timeout
+* timeout is the quest timeout in  **microseconds**
+
+* each api has both synchronous and asynchronous implementation depends on the parameter callback：
+
+```python
+# a get_token example in sync:
+token, error = client.get_token(uid)
+if error == None:
+    print("[Sync get_token ok] : token = " + token)
+else:
+    print("[Sync get_token error] : " + str(error))
     
-    def onException(self, exception):
-        print repr(exception)
-
-client.sendMessage(1, 2, 51, "test msg", "test attrs", MyDoneCallback())
+# a get_token example in async:
+class MyGetTokenCallback(GetTokenCallback):
+    def callback(self, token, error):
+        if error == None:
+            print("[Async get_token ok] : token = " + token)
+        else:
+            print("[Async get_token error] : code : " + str(error.code) + " message: " + error.message)
+client.get_token(uid, callback = MyGetTokenCallback())
 ```
 
-#### API ####
-
-* __init__(self, pid, secretKey, endpoint, timeout=5)    
-* close(self)
-* setConnectionConnectedCallback(self, cb)
-* setConnectionWillCloseCallback(self, cb)
-* enableEncryptor(self, peerPubData) 
-
-```
-以下请求类接口，均有同步与异步两个版本
-
-对于异步版本，sendMessage、sendMessages、sendGroupMessage、sendRoomMessage、broadcastMessage、addfriends、deleteFriends、deleteGroupMembers、deleteGroup、addGroupBan、removeGroupBan、addRoomBan、removeRoomBan、addProjectBlack、removeProjectBlack
-这几个接口cb参数类型为DoneCallback的派生类
-其他接口cb参数类型为其同名的Callback派生类（如isGroupMember，则为IsGroupMemberCallback）
-
-对于同步版本，当发生异常时会抛出异常，当正常时返回该接口特有的数据类型，可参考对应异步版本Callback中done方法参数
-```
-
-* sendMessage(self, fromUid, toUid, mtype, msg, attrs, cb)  
-* sendMessagesSync(self, fromUid, toUids, mtype, msg, attrs) 
-* sendGroupMessage(self, fromUid, gid, mtype, msg, attrs, cb)
-* sendGroupMessageSync(self, fromUid, gid, mtype, msg, attrs)
-* sendRoomMessage(self, fromUid, rid, mtype, msg, attrs, cb)
-* sendRoomMessageSync(self, fromUid, rid, mtype, msg, attrs)
-* broadcastMessage(self, fromUid, mtype, msg, attrs, cb) 
-* broadcastMessageSync(self, fromUid, mtype, msg, attrs) 
-* addfriends(self, uid, friends, cb)
-* addfriendsSync(self, uid, friends) 
-* deleteFriends(self, uid, friends, cb)
-* deleteFriendsSync(self, uid, friends)
-* getFriends(self, uid, cb) 
-* getFriendsSync(self, uid)
-* isFriend(self, uid, fuid, cb)
-* isFriendSync(self, uid, fuid)
-* isFriends(self, uid, fuids, cb)
-* isFriendsSync(self, uid, fuids)
-* addGroupMembers(self, gid, uids, cb)
-* addGroupMembersSync(self, gid, uids)
-* deleteGroupMembers(self, gid, uids, cb)
-* deleteGroupMembersSync(self, gid, uids)
-* deleteGroup(self, gid)
-* deleteGroupSync(self, gid)
-* getGroupMembers(self, gid, cb)
-* getGroupMembersSync(self, gid)
-* isGroupMember(self, gid, uid, cb)
-* isGroupMemberSync(self, gid, uid)
-* getUserGroups(self, uid, cb)
-* getUserGroupsSync(self, uid)
-* getToken(self, uid, cb)
-* getTokenSync(self, uid)
-* getOnlineUsers(self, uids, cb)
-* getOnlineUsersSync(self, uids)
-* addGroupBan(self, gid, uid, btime, cb)
-* addGroupBanSync(self, gid, uid, btime)
-* removeGroupBan(self, gid, uid, cb)
-* removeGroupBanSync(self, gid, uid)
-* addRoomBan(self, rid, uid, btime, cb)
-* addRoomBanSync(self, rid, uid, btime)
-* removeRoomBan(self, rid, uid, cb)
-* removeRoomBanSync(self, rid, uid)
-* addProjectBlack(self, uid, btime, cb)
-* addProjectBlackSync(self, uid, btime)
-* removeProjectBlack(self, uid, cb)
-* removeProjectBlackSync(self, uid)
-* isBanOfGroup(self, gid, uid, cb)
-* isBanOfGroupSync(self, gid, uid)
-* isBanOfRoom(self, rid, uid, cb)
-* isBanOfRoomSync(self, rid, uid)
-* isProjectBlack(self, uid, cb)
-* isProjectBlackSync(self, uid)
+* the document will introduce the return parameter type and callback function type of each api
 
 
 
+### Token Functions
+
+Please refer to 
+
+[Token.md](doc/Token.md)
 
 
 
+### Chat Functions
+
+Please refer to 
+
+[Chat.md](doc/Chat.md)
 
 
 
+### Message Functions
+
+Please refer to 
+
+[Message.md](doc/Message.md)
 
 
 
+### Files Functions
+
+Please refer to 
+
+[Files.md](doc/Files.md)
 
 
 
+### Friend Functions
+
+Please refer to 
+
+[Friend.md](doc/Friend.md)
 
 
 
+### Group Functions
+
+Please refer to 
+
+[Group.md](doc/Group.md)
 
 
 
+### Room Functions
 
+Please refer to 
+
+[Room.md](doc/Room.md)
+
+
+
+### User Functions
+
+Please refer to 
+
+[User.md](doc/User.md)
+
+
+
+### Data Functions
+
+Please refer to 
+
+[Data.md](doc/Data.md)
+
+
+
+### Device Functions
+
+Please refer to 
+
+[Device.md](doc/Device.md)
+
+
+
+### Listen & Monitor Functions
+
+Please refer to 
+
+[Listen.md](doc/Listen.md)
 
 
 
