@@ -32,7 +32,7 @@ from rtm import *
 ### Create RTMClient
 
 ```python
-client = RTMServerClient(pid, secret, endpoint, auto_reconnect, quest_timeout_microseconds)
+client = RTMServerClient(pid, secret, endpoint, auto_reconnect, quest_timeout_milliseconds)
 ```
 
 * please get your project params from RTM Console.
@@ -48,7 +48,7 @@ client = RTMServerClient(pid, secret, endpoint, auto_reconnect, quest_timeout_mi
 client.set_quest_timeout(timeout)
 ```
 
-* timeout is in **microseconds**, this api can set the global quest timeout, you can also set a timeout for each request individually
+* timeout is in **milliseconds**, this api can set the global quest timeout, you can also set a timeout for each request individually
 
 
 
@@ -103,7 +103,7 @@ client.set_quest_processor(processor)
 ### common params
 
 * each api has two common params: callback and timeout
-* timeout is the quest timeout in  **microseconds**
+* timeout is the quest timeout in  **milliseconds**
 
 * each api has both synchronous and asynchronous implementation depends on the parameter callback：
 
