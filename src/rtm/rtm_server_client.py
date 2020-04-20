@@ -11,7 +11,7 @@ from .rtm_callback import *
 from .rtm_callback_internal import *
 from .rtm_quest_processor_internal import *
 
-RTM_SDK_VERSION = '2.0.0'
+RTM_SDK_VERSION = '2.0.1'
 RTM_API_VERSION = '2.0.1'
 
 class MessageType(Enum):
