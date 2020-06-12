@@ -172,6 +172,18 @@ class IsFriendsCallback(object):
     def callback(self, fuids, error):
         pass
 
+class GetBlacksCallback(object):
+    def callback(self, uids, error):
+        pass
+
+class IsBlackCallback(object):
+    def callback(self, ok, error):
+        pass
+
+class IsBlacksCallback(object):
+    def callback(self, fuids, error):
+        pass
+
 class GetGroupMembersCallback(object):
     def callback(self, uids, error):
         pass

@@ -11,8 +11,8 @@ from .rtm_callback import *
 from .rtm_callback_internal import *
 from .rtm_quest_processor_internal import *
 
-RTM_SDK_VERSION = '2.0.1'
-RTM_API_VERSION = '2.0.1'
+RTM_SDK_VERSION = '2.1.0'
+RTM_API_VERSION = '2.0.3'
 
 class MessageType(Enum):
     P2P_MESSAGE = 1
@@ -562,7 +562,7 @@ class RTMServerClient(object):
     def get_broadcast_chat_info(self, mid, from_uid, callback = None, timeout = 0):
         return self.get_message_info(mid, from_uid, 0, MessageType.BROADCAST_MESSAGE.value, callback, timeout)
 
-    def translate(self, text, dst, src = None, ttype = 'chat', profanity = 'off', post_profanity = False, uid = None, callback = None, timeout = 0):
+    def translate(self, text, dst, src = None, ttype = 'chat', profanity = 'off', uid = None, callback = None, timeout = 0):
         if callback != None and not isinstance(callback, TranslateCallback):
             raise Exception('callback type error')
         ts = int(time.time())
@@ -575,8 +575,7 @@ class RTMServerClient(object):
             'text' : text,
             'dst' : dst,
             'type' : ttype,
-            'profanity' : profanity,
-            'postProfanity' : post_profanity
+            'profanity' : profanity
         })
         if src != None:
             quest.param('src', src)
@@ -1102,6 +1101,105 @@ class RTMServerClient(object):
             'fuids' : fuids
         })
         callback_internal = IsFriendsCallbackInternal(callback)
+        if callback != None:
+            self.client.send_quest(quest, callback_internal, timeout)
+        else:
+            answer = self.client.send_quest(quest, None, timeout)
+            return callback_internal.get_result(answer)
+
+    def add_blacks(self, uid, blacks, callback = None, timeout = 0):
+        if callback != None and not isinstance(callback, BasicCallback):
+            raise Exception('callback type error')
+        ts = int(time.time())
+        salt = self.gen_mid()
+        quest = Quest('addblacks', params = {
+            'pid' : self.pid,
+            'sign' : self.gen_sign(salt, 'addblacks', ts),
+            'salt' : salt,
+            'ts' : ts,
+            'uid' : uid,
+            'blacks' : blacks
+        })
+        callback_internal = BasicCallbackInternal(callback)
+        if callback != None:
+            self.client.send_quest(quest, callback_internal, timeout)
+        else:
+            answer = self.client.send_quest(quest, None, timeout)
+            return callback_internal.get_result(answer)
+
+    def delete_blacks(self, uid, blacks, callback = None, timeout = 0):
+        if callback != None and not isinstance(callback, BasicCallback):
+            raise Exception('callback type error')
+        ts = int(time.time())
+        salt = self.gen_mid()
+        quest = Quest('delblacks', params = {
+            'pid' : self.pid,
+            'sign' : self.gen_sign(salt, 'delblacks', ts),
+            'salt' : salt,
+            'ts' : ts,
+            'uid' : uid,
+            'blacks' : blacks
+        })
+        callback_internal = BasicCallbackInternal(callback)
+        if callback != None:
+            self.client.send_quest(quest, callback_internal, timeout)
+        else:
+            answer = self.client.send_quest(quest, None, timeout)
+            return callback_internal.get_result(answer)
+
+    def get_blacks(self, uid, callback = None, timeout = 0):
+        if callback != None and not isinstance(callback, GetBlacksCallback):
+            raise Exception('callback type error')
+        ts = int(time.time())
+        salt = self.gen_mid()
+        quest = Quest('getblacks', params = {
+            'pid' : self.pid,
+            'sign' : self.gen_sign(salt, 'getblacks', ts),
+            'salt' : salt,
+            'ts' : ts,
+            'uid' : uid
+        })
+        callback_internal = GetBlacksCallbackInternal(callback)
+        if callback != None:
+            self.client.send_quest(quest, callback_internal, timeout)
+        else:
+            answer = self.client.send_quest(quest, None, timeout)
+            return callback_internal.get_result(answer)
+
+    def is_black(self, uid, buid, callback = None, timeout = 0):
+        if callback != None and not isinstance(callback, IsBlackCallback):
+            raise Exception('callback type error')
+        ts = int(time.time())
+        salt = self.gen_mid()
+        quest = Quest('isblack', params = {
+            'pid' : self.pid,
+            'sign' : self.gen_sign(salt, 'isblack', ts),
+            'salt' : salt,
+            'ts' : ts,
+            'uid' : uid,
+            'buid' : buid
+        })
+        callback_internal = IsBlackCallbackInternal(callback)
+        if callback != None:
+            self.client.send_quest(quest, callback_internal, timeout)
+        else:
+            answer = self.client.send_quest(quest, None, timeout)
+            return callback_internal.get_result(answer)
+
+    def is_blacks(self, uid, buids, callback = None, timeout = 0):
+        if callback != None and not isinstance(callback, IsBlacksCallback):
+            raise Exception('callback type error')
+        ts = int(time.time())
+        salt = self.gen_mid()
+        quest = Quest('isblacks', params = {
+            'pid' : self.pid,
+            'sign' : self.gen_sign(salt, 'isblacks', ts),
+            'salt' : salt,
+            'ts' : ts,
+            'uid' : uid,
+            'buids' : buids
+        })
+        callback_internal = IsBlacksCallbackInternal(callback)
         if callback != None:
             self.client.send_quest(quest, callback_internal, timeout)
         else:

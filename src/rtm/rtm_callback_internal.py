@@ -392,6 +392,51 @@ class IsFriendsCallbackInternal(QuestCallback):
         fuids, error = self.get_result(answer)
         self.real_callback.callback(fuids, error)
 
+class GetBlacksCallbackInternal(QuestCallback):
+    def __init__(self, real_callback):
+        self.real_callback = real_callback
+
+    def get_result(self, answer):
+        if answer.is_error():
+            return None, QuestError(answer.error_code, answer.error_message)
+        else:
+            uids = answer.get("uids", [])
+            return uids, None
+
+    def callback(self, answer):
+        uids, error = self.get_result(answer)
+        self.real_callback.callback(uids, error)
+
+class IsBlackCallbackInternal(QuestCallback):
+    def __init__(self, real_callback):
+        self.real_callback = real_callback
+
+    def get_result(self, answer):
+        if answer.is_error():
+            return None, QuestError(answer.error_code, answer.error_message)
+        else:
+            ok = answer.get("ok", False)
+            return ok, None
+
+    def callback(self, answer):
+        ok, error = self.get_result(answer)
+        self.real_callback.callback(ok, error)
+
+class IsBlacksCallbackInternal(QuestCallback):
+    def __init__(self, real_callback):
+        self.real_callback = real_callback
+
+    def get_result(self, answer):
+        if answer.is_error():
+            return None, QuestError(answer.error_code, answer.error_message)
+        else:
+            fuids = answer.get("buids", [])
+            return fuids, None
+
+    def callback(self, answer):
+        fuids, error = self.get_result(answer)
+        self.real_callback.callback(fuids, error)
+
 class GetGroupMembersCallbackInternal(QuestCallback):
     def __init__(self, real_callback):
         self.real_callback = real_callback
