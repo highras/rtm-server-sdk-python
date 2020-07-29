@@ -32,11 +32,10 @@ from rtm import *
 ### Create RTMClient
 
 ```python
-client = RTMServerClient(pid, secret, endpoint, auto_reconnect, quest_timeout_milliseconds)
+client = RTMServerClient(pid, secret, endpoint, quest_timeout_seconds)
 ```
 
 * please get your project params from RTM Console.
-* **auto_reconnect** means establishing the connection in implicit or explicit. NOT keep the connection.
 
 
 
@@ -48,7 +47,7 @@ client = RTMServerClient(pid, secret, endpoint, auto_reconnect, quest_timeout_mi
 client.set_quest_timeout(timeout)
 ```
 
-* timeout is in **milliseconds**, this api can set the global quest timeout, you can also set a timeout for each request individually
+* timeout is in **seconds**, this api can set the global quest timeout, you can also set a timeout for each request individually
 
 
 
@@ -58,25 +57,18 @@ client.set_quest_timeout(timeout)
 client.set_connection_callback(callback)
 ```
 
-* the callback is a sub-class of ConnectionCallback, you can use it like this:
+* the callback is a sub-class of RTMConnectionCallback, you can use it like this:
 
 ```python
-class MyConnectionCallback(ConnectionCallback):
-    def connected(self, connection_id, endpoint):
-        print("connected")
-        print(connection_id)
-        print(endpoint)
+class MyConnectionCallback(RTMConnectionCallback):
+    def connected(self, connection_id, endpoint, connected, is_reconnect):
+        print("connected", connection_id, endpoint, connected, is_reconnect)
 
-    def closed(self, connection_id, endpoint, caused_by_error):
-        print("closed")
-        print(connection_id)
-        print(endpoint)
-        print(caused_by_error)
+    def closed(self, connection_id, endpoint, caused_by_error, is_reconnect):
+        print("closed", connection_id, endpoint, caused_by_error, is_reconnect)
 
 client.set_connection_callback(MyConnectionCallback())
 ```
-
-
 
 #### enable_encryptor_by_pem_file
 
@@ -96,6 +88,56 @@ client.set_quest_processor(processor)
 
 * set the server quest processor to get the event and message forward from the RTM-Server, you can see the detailed usage in the Listening section below
 
+#### set_auto_connect
+
+```python
+def set_auto_connect(self, auto_connect)
+```
+
+#### set_regressive_strategy
+
+* set the regressive strategy when auto reconnect
+
+```python
+def set_regressive_strategy(self, strategy)
+```
+
+```
+# strategy is:
+class RegressiveStrategy(object):
+    def __init__(self):
+        self.connect_failed_max_interval_milliseconds = 1500
+        self.start_connect_failed_count = 5
+        self.first_interval_seconds = 2
+        self.max_interval_seconds = 120
+        self.linear_regressive_count = 5
+```
+
+* set the enable the auto connect and reconnect
+
+#### set_quest_timeout
+
+```python
+def set_quest_timeout(self, timeout)
+```
+
+* set global quest timeout
+
+#### set_connect_timeout
+
+```python
+def set_connect_timeout(self, timeout)
+```
+
+* set connect timeout
+
+#### set_error_recorder
+
+```python
+def set_error_recorder(self, recorder)
+```
+
+* set error recorder
 
 
 ## API
@@ -109,19 +151,19 @@ client.set_quest_processor(processor)
 
 ```python
 # a get_token example in sync:
-token, error = client.get_token(uid)
-if error == None:
+token, error_code = client.get_token(uid)
+if error_code == FPNN_ERROR.FPNN_EC_OK:
     print("[Sync get_token ok] : token = " + token)
 else:
-    print("[Sync get_token error] : " + str(error))
+    print("[Sync get_token error code] : " + str(error_code))
     
 # a get_token example in async:
 class MyGetTokenCallback(GetTokenCallback):
-    def callback(self, token, error):
-        if error == None:
+    def callback(self, token, error_code):
+        if error_code == FPNN_ERROR.FPNN_EC_OK:
             print("[Async get_token ok] : token = " + token)
         else:
-            print("[Async get_token error] : code : " + str(error.code) + " message: " + error.message)
+            print("[Async get_token error code] : " + str(error_code))
 client.get_token(uid, callback = MyGetTokenCallback())
 ```
 

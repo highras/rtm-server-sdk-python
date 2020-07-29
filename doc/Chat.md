@@ -11,21 +11,21 @@
 ##### send a P2P chat
 
 ```
-send_chat(from_uid, to_uid, msg, attrs, mid = 0, callback = None, timeout = 0)
+send_chat(from_uid, to_uid, message, attrs, mid = 0, callback = None, timeout = 0)
 ```
 
 #### params:
 
 * from_uid: **(Required | int)**  from user id
 * to_uid: **(Required | int)**  to user id
-* msg: **(Required | str)**  message content
+* message: **(Required | str)**  message content
 * attrs: **(Required | str)**  message attributes
 * mid: **(Optional | int)**  message id, if mid = 0, will generate a new mid
 * callback: **(Optional | a sub-class of SendMessageCallback )**  used in async implementation
 
 ```python
 class SendMessageCallback(object):
-    def callback(self, mid, mtime, error):
+    def callback(self, mid, mtime, error_code):
         pass
 ```
 
@@ -35,7 +35,7 @@ class SendMessageCallback(object):
 * in sync implementation:
   * mid:  **(int)** message id
   * mtime:  **(int)** server returned timestamp in seconds
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 #### **NOTICE:**
 
@@ -48,21 +48,21 @@ class SendMessageCallback(object):
 ##### send a muti-user chat
 
 ```
-send_chats(from_uid, to_uids, msg, attrs, mid = 0, callback = None, timeout = 0)
+send_chats(from_uid, to_uids, message, attrs, mid = 0, callback = None, timeout = 0)
 ```
 
 #### params:
 
 * from_uid: **(Required | int)**  from user id
 * to_uids: **(Required | [int])**  to user id list
-* msg: **(Required | str)**  message content
+* message: **(Required | str)**  message content
 * attrs: **(Required | str)**  message attributes
 * mid: **(Optional | int)**  message id, if mid = 0, will generate a new mid
 * callback: **(Optional | a sub-class of SendMessageCallback )**  used in async implementation
 
 ```python
 class SendMessageCallback(object):
-    def callback(self, mid, mtime, error):
+    def callback(self, mid, mtime, error_code):
         pass
 ```
 
@@ -72,7 +72,7 @@ class SendMessageCallback(object):
 * in sync implementation:
   * mid:  **(int)** message id
   * mtime:  **(int)** server returned timestamp in seconds
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
 
 
 
@@ -81,21 +81,21 @@ class SendMessageCallback(object):
 ##### send a group chat
 
 ```
-send_group_chat(from_uid, gid, msg, attrs, mid = 0, callback = None, timeout = 0)
+send_group_chat(from_uid, gid, message, attrs, mid = 0, callback = None, timeout = 0)
 ```
 
 #### params:
 
 * from_uid: **(Required | int)**  from user id
 * gid: **(Required | int)**  group id
-* msg: **(Required | str)**  message content
+* message: **(Required | str)**  message content
 * attrs: **(Required | str)**  message attributes
 * mid: **(Optional | int)**  message id, if mid = 0, will generate a new mid
 * callback: **(Optional | a sub-class of SendMessageCallback )**  used in async implementation
 
 ```python
 class SendMessageCallback(object):
-    def callback(self, mid, mtime, error):
+    def callback(self, mid, mtime, error_code):
         pass
 ```
 
@@ -105,7 +105,7 @@ class SendMessageCallback(object):
 * in sync implementation:
   * mid:  **(int)** message id
   * mtime:  **(int)** server returned timestamp in seconds
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
 
 
 
@@ -114,21 +114,21 @@ class SendMessageCallback(object):
 ##### send a room chat
 
 ```
-send_room_chat(from_uid, rid, msg, attrs, mid = 0, callback = None, timeout = 0)
+send_room_chat(from_uid, rid, message, attrs, mid = 0, callback = None, timeout = 0)
 ```
 
 #### params:
 
 * from_uid: **(Required | int)**  from user id
 * rid: **(Required | int)**  room id
-* msg: **(Required | str)**  message content
+* message: **(Required | str)**  message content
 * attrs: **(Required | str)**  message attributes
 * mid: **(Optional | int)**  message id, if mid = 0, will generate a new mid
 * callback: **(Optional | a sub-class of SendMessageCallback )**  used in async implementation
 
 ```python
 class SendMessageCallback(object):
-    def callback(self, mid, mtime, error):
+    def callback(self, mid, mtime, error_code):
         pass
 ```
 
@@ -138,7 +138,7 @@ class SendMessageCallback(object):
 * in sync implementation:
   * mid:  **(int)** message id
   * mtime:  **(int)** server returned timestamp in seconds
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
 
 
 
@@ -147,20 +147,20 @@ class SendMessageCallback(object):
 ##### broadcast chat
 
 ```
-broadcast_chat(from_uid, msg, attrs, mid = 0, callback = None, timeout = 0)
+broadcast_chat(from_uid, message, attrs, mid = 0, callback = None, timeout = 0)
 ```
 
 #### params:
 
 * from_uid: **(Required | int)**  from user id
-* msg: **(Required | str)**  message content
+* message: **(Required | str)**  message content
 * attrs: **(Required | str)**  message attributes
 * mid: **(Optional | int)**  message id, if mid = 0, will generate a new mid
 * callback: **(Optional | a sub-class of SendMessageCallback )**  used in async implementation
 
 ```python
 class SendMessageCallback(object):
-    def callback(self, mid, mtime, error):
+    def callback(self, mid, mtime, error_code):
         pass
 ```
 
@@ -170,7 +170,7 @@ class SendMessageCallback(object):
 * in sync implementation:
   * mid:  **(int)** message id
   * mtime:  **(int)** server returned timestamp in seconds
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
 
 
 
@@ -179,21 +179,21 @@ class SendMessageCallback(object):
 ##### send a P2P audio
 
 ```
-send_audio(from_uid, to_uid, msg, attrs, mid = 0, callback = None, timeout = 0)
+send_audio(from_uid, to_uid, message, attrs, mid = 0, callback = None, timeout = 0)
 ```
 
 #### params:
 
 * from_uid: **(Required | int)**  from user id
 * to_uid: **(Required | int)**  to user id
-* msg: **(Required | str)**  message content
+* message: **(Required | str)**  message content
 * attrs: **(Required | str)**  message attributes
 * mid: **(Optional | int)**  message id, if mid = 0, will generate a new mid
 * callback: **(Optional | a sub-class of SendMessageCallback )**  used in async implementation
 
 ```python
 class SendMessageCallback(object):
-    def callback(self, mid, mtime, error):
+    def callback(self, mid, mtime, error_code):
         pass
 ```
 
@@ -203,7 +203,7 @@ class SendMessageCallback(object):
 * in sync implementation:
   * mid:  **(int)** message id
   * mtime:  **(int)** server returned timestamp in seconds
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
 
 
 
@@ -212,21 +212,21 @@ class SendMessageCallback(object):
 ##### send a muti-user audio
 
 ```
-send_audios(from_uid, to_uids, msg, attrs, mid = 0, callback = None, timeout = 0)
+send_audios(from_uid, to_uids, message, attrs, mid = 0, callback = None, timeout = 0)
 ```
 
 #### params:
 
 * from_uid: **(Required | int)**  from user id
 * to_uids: **(Required | [int])**  to user id list
-* msg: **(Required | str)**  message content
+* message: **(Required | str)**  message content
 * attrs: **(Required | str)**  message attributes
 * mid: **(Optional | int)**  message id, if mid = 0, will generate a new mid
 * callback: **(Optional | a sub-class of SendMessageCallback )**  used in async implementation
 
 ```python
 class SendMessageCallback(object):
-    def callback(self, mid, mtime, error):
+    def callback(self, mid, mtime, error_code):
         pass
 ```
 
@@ -236,7 +236,7 @@ class SendMessageCallback(object):
 * in sync implementation:
   * mid:  **(int)** message id
   * mtime:  **(int)** server returned timestamp in seconds
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
 
 
 
@@ -245,21 +245,21 @@ class SendMessageCallback(object):
 ##### send a group audio
 
 ```
-send_group_audio(from_uid, gid, msg, attrs, mid = 0, callback = None, timeout = 0)
+send_group_audio(from_uid, gid, message, attrs, mid = 0, callback = None, timeout = 0)
 ```
 
 #### params:
 
 * from_uid: **(Required | int)**  from user id
 * gid: **(Required | int)**  group id
-* msg: **(Required | str)**  message content
+* message: **(Required | str)**  message content
 * attrs: **(Required | str)**  message attributes
 * mid: **(Optional | int)**  message id, if mid = 0, will generate a new mid
 * callback: **(Optional | a sub-class of SendMessageCallback )**  used in async implementation
 
 ```python
 class SendMessageCallback(object):
-    def callback(self, mid, mtime, error):
+    def callback(self, mid, mtime, error_code):
         pass
 ```
 
@@ -269,7 +269,7 @@ class SendMessageCallback(object):
 * in sync implementation:
   * mid:  **(int)** message id
   * mtime:  **(int)** server returned timestamp in seconds
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
 
 
 
@@ -278,21 +278,21 @@ class SendMessageCallback(object):
 ##### send a room audio
 
 ```
-send_room_audio(from_uid, rid, msg, attrs, mid = 0, callback = None, timeout = 0)
+send_room_audio(from_uid, rid, message, attrs, mid = 0, callback = None, timeout = 0)
 ```
 
 #### params:
 
 * from_uid: **(Required | int)**  from user id
 * rid: **(Required | int)**  room id
-* msg: **(Required | str)**  message content
+* message: **(Required | str)**  message content
 * attrs: **(Required | str)**  message attributes
 * mid: **(Optional | int)**  message id, if mid = 0, will generate a new mid
 * callback: **(Optional | a sub-class of SendMessageCallback )**  used in async implementation
 
 ```python
 class SendMessageCallback(object):
-    def callback(self, mid, mtime, error):
+    def callback(self, mid, mtime, error_code):
         pass
 ```
 
@@ -302,7 +302,7 @@ class SendMessageCallback(object):
 * in sync implementation:
   * mid:  **(int)** message id
   * mtime:  **(int)** server returned timestamp in seconds
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
 
 
 
@@ -311,20 +311,20 @@ class SendMessageCallback(object):
 ##### broadcast audio
 
 ```
-broadcast_audio(from_uid, msg, attrs, mid = 0, callback = None, timeout = 0)
+broadcast_audio(from_uid, message, attrs, mid = 0, callback = None, timeout = 0)
 ```
 
 #### params:
 
 * from_uid: **(Required | int)**  from user id
-* msg: **(Required | str)**  message content
+* message: **(Required | str)**  message content
 * attrs: **(Required | str)**  message attributes
 * mid: **(Optional | int)**  message id, if mid = 0, will generate a new mid
 * callback: **(Optional | a sub-class of SendMessageCallback )**  used in async implementation
 
 ```python
 class SendMessageCallback(object):
-    def callback(self, mid, mtime, error):
+    def callback(self, mid, mtime, error_code):
         pass
 ```
 
@@ -334,7 +334,7 @@ class SendMessageCallback(object):
 * in sync implementation:
   * mid:  **(int)** message id
   * mtime:  **(int)** server returned timestamp in seconds
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
 
 
 
@@ -343,21 +343,21 @@ class SendMessageCallback(object):
 ##### send a P2P cmd
 
 ```
-send_cmd(from_uid, to_uid, msg, attrs, mid = 0, callback = None, timeout = 0)
+send_cmd(from_uid, to_uid, message, attrs, mid = 0, callback = None, timeout = 0)
 ```
 
 #### params:
 
 * from_uid: **(Required | int)**  from user id
 * to_uid: **(Required | int)**  to user id
-* msg: **(Required | str)**  message content
+* message: **(Required | str)**  message content
 * attrs: **(Required | str)**  message attributes
 * mid: **(Optional | int)**  message id, if mid = 0, will generate a new mid
 * callback: **(Optional | a sub-class of SendMessageCallback )**  used in async implementation
 
 ```python
 class SendMessageCallback(object):
-    def callback(self, mid, mtime, error):
+    def callback(self, mid, mtime, error_code):
         pass
 ```
 
@@ -367,7 +367,7 @@ class SendMessageCallback(object):
 * in sync implementation:
   * mid:  **(int)** message id
   * mtime:  **(int)** server returned timestamp in seconds
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
 
 
 
@@ -376,21 +376,21 @@ class SendMessageCallback(object):
 ##### send a muti-user cmd
 
 ```
-send_cmds(from_uid, to_uids, msg, attrs, mid = 0, callback = None, timeout = 0)
+send_cmds(from_uid, to_uids, message, attrs, mid = 0, callback = None, timeout = 0)
 ```
 
 #### params:
 
 * from_uid: **(Required | int)**  from user id
 * to_uids: **(Required | [int])**  to user id list
-* msg: **(Required | str)**  message content
+* message: **(Required | str)**  message content
 * attrs: **(Required | str)**  message attributes
 * mid: **(Optional | int)**  message id, if mid = 0, will generate a new mid
 * callback: **(Optional | a sub-class of SendMessageCallback )**  used in async implementation
 
 ```python
 class SendMessageCallback(object):
-    def callback(self, mid, mtime, error):
+    def callback(self, mid, mtime, error_code):
         pass
 ```
 
@@ -400,7 +400,7 @@ class SendMessageCallback(object):
 * in sync implementation:
   * mid:  **(int)** message id
   * mtime:  **(int)** server returned timestamp in seconds
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
 
 
 
@@ -409,21 +409,21 @@ class SendMessageCallback(object):
 ##### send a group cmd
 
 ```
-send_group_cmd(from_uid, gid, msg, attrs, mid = 0, callback = None, timeout = 0)
+send_group_cmd(from_uid, gid, message, attrs, mid = 0, callback = None, timeout = 0)
 ```
 
 #### params:
 
 * from_uid: **(Required | int)**  from user id
 * gid: **(Required | int)**  group id
-* msg: **(Required | str)**  message content
+* message: **(Required | str)**  message content
 * attrs: **(Required | str)**  message attributes
 * mid: **(Optional | int)**  message id, if mid = 0, will generate a new mid
 * callback: **(Optional | a sub-class of SendMessageCallback )**  used in async implementation
 
 ```python
 class SendMessageCallback(object):
-    def callback(self, mid, mtime, error):
+    def callback(self, mid, mtime, error_code):
         pass
 ```
 
@@ -433,7 +433,7 @@ class SendMessageCallback(object):
 * in sync implementation:
   * mid:  **(int)** message id
   * mtime:  **(int)** server returned timestamp in seconds
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
 
 
 
@@ -442,21 +442,21 @@ class SendMessageCallback(object):
 ##### send a room cmd
 
 ```
-send_room_cmd(from_uid, rid, msg, attrs, mid = 0, callback = None, timeout = 0)
+send_room_cmd(from_uid, rid, message, attrs, mid = 0, callback = None, timeout = 0)
 ```
 
 #### params:
 
 * from_uid: **(Required | int)**  from user id
 * rid: **(Required | int)**  room id
-* msg: **(Required | str)**  message content
+* message: **(Required | str)**  message content
 * attrs: **(Required | str)**  message attributes
 * mid: **(Optional | int)**  message id, if mid = 0, will generate a new mid
 * callback: **(Optional | a sub-class of SendMessageCallback )**  used in async implementation
 
 ```python
 class SendMessageCallback(object):
-    def callback(self, mid, mtime, error):
+    def callback(self, mid, mtime, error_code):
         pass
 ```
 
@@ -466,7 +466,7 @@ class SendMessageCallback(object):
 * in sync implementation:
   * mid:  **(int)** message id
   * mtime:  **(int)** server returned timestamp in seconds
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
 
 
 
@@ -475,20 +475,20 @@ class SendMessageCallback(object):
 ##### broadcast cmd
 
 ```
-broadcast_cmd(from_uid, msg, attrs, mid = 0, callback = None, timeout = 0)
+broadcast_cmd(from_uid, message, attrs, mid = 0, callback = None, timeout = 0)
 ```
 
 #### params:
 
 * from_uid: **(Required | int)**  from user id
-* msg: **(Required | str)**  message content
+* message: **(Required | str)**  message content
 * attrs: **(Required | str)**  message attributes
 * mid: **(Optional | int)**  message id, if mid = 0, will generate a new mid
 * callback: **(Optional | a sub-class of SendMessageCallback )**  used in async implementation
 
 ```python
 class SendMessageCallback(object):
-    def callback(self, mid, mtime, error):
+    def callback(self, mid, mtime, error_code):
         pass
 ```
 
@@ -498,7 +498,7 @@ class SendMessageCallback(object):
 * in sync implementation:
   * mid:  **(int)** message id
   * mtime:  **(int)** server returned timestamp in seconds
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
 
 
 
@@ -523,36 +523,19 @@ get_group_chat(uid, gid, desc, num, begin = None, end = None, lastid = None, cal
 
 ```python
 class GetGroupMessageCallback(object):
-    def callback(self, result, error):
+    def callback(self, result, error_code):
         pass
-
-# result is:
-class GetGroupMessageResult(object):
-    def __init__(self):
-        self.num = 0
-        self.lastid = 0
-        self.begin = 0
-        self.end = 0
-        self.msgs = []
-        
-# GetGroupMessageResult.msgs is list of:
-class GroupMessage(object):
-    def __init__(self):
-        self.id = 0
-        self.from_uid = 0
-        self.mtype = 0
-        self.mid = 0
-        self.msg = str()
-        self.attrs = str()
-        self.mtime = 0
 ```
+
+#### callback params: 
+ * result is: HistoryMessageResult Please refer [RTM Structures](Structures.md).
 
 #### return:
 
 * in async implementation, return None
 * in sync implementation:
-  * result:  **(GetGroupMessageResult)** message result
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * result:  **(HistoryMessageResult)** message result
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
 
 
 
@@ -577,36 +560,19 @@ get_room_chat(uid, rid, desc, num, begin = None, end = None, lastid = None, call
 
 ```python
 class GetRoomMessageCallback(object):
-    def callback(self, result, error):
+    def callback(self, result, error_code):
         pass
-
-# result is:
-class GetRoomMessageResult(object):
-    def __init__(self):
-        self.num = 0
-        self.lastid = 0
-        self.begin = 0
-        self.end = 0
-        self.msgs = []
-        
-# GetRoomMessageResult.msgs is list of:
-class RoomMessage(object):
-    def __init__(self):
-        self.id = 0
-        self.from_uid = 0
-        self.mtype = 0
-        self.mid = 0
-        self.msg = str()
-        self.attrs = str()
-        self.mtime = 0
 ```
+
+#### callback params: 
+ * result is: HistoryMessageResult Please refer [RTM Structures](Structures.md).
 
 #### return:
 
 * in async implementation, return None
 * in sync implementation:
-  * result:  **(GetRoomMessageResult)** message result
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * result:  **(HistoryMessageResult)** message result
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
 
 
 
@@ -630,36 +596,19 @@ get_broadcast_chat(uid, desc, num, begin = None, end = None, lastid = None, call
 
 ```python
 class GetBroadcastMessageCallback(object):
-    def callback(self, result, error):
+    def callback(self, result, error_code):
         pass
-
-# result is:
-class GetBroadcastMessageResult(object):
-    def __init__(self):
-        self.num = 0
-        self.lastid = 0
-        self.begin = 0
-        self.end = 0
-        self.msgs = []
-        
-# GetBroadcastMessageResult.msgs is list of:
-class BroadcastMessage(object):
-    def __init__(self):
-        self.id = 0
-        self.from_uid = 0
-        self.mtype = 0
-        self.mid = 0
-        self.msg = str()
-        self.attrs = str()
-        self.mtime = 0
 ```
+
+#### callback params: 
+ * result is: HistoryMessageResult Please refer [RTM Structures](Structures.md).
 
 #### return:
 
 * in async implementation, return None
 * in sync implementation:
-  * result:  **(GetBroadcastMessageResult)** message result
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * result:  **(HistoryMessageResult)** message result
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
 
 
 
@@ -684,36 +633,19 @@ get_p2p_chat(uid, ouid, desc, num, begin = None, end = None, lastid = None, call
 
 ```python
 class GetP2PMessageCallback(object):
-    def callback(self, result, error):
+    def callback(self, result, error_code):
         pass
-
-# result is:
-class GetP2PMessageResult(object):
-    def __init__(self):
-        self.num = 0
-        self.lastid = 0
-        self.begin = 0
-        self.end = 0
-        self.msgs = []
-        
-# GetBroadcastMessageResult.msgs is list of:
-class P2PMessage(object):
-    def __init__(self):
-        self.id = 0
-        self.direction = 0
-        self.mtype = 0
-        self.mid = 0
-        self.msg = str()
-        self.attrs = str()
-        self.mtime = 0
 ```
+
+#### callback params: 
+ * result is: HistoryMessageResult Please refer [RTM Structures](Structures.md).
 
 #### return:
 
 * in async implementation, return None
 * in sync implementation:
-  * result:  **(GetP2PMessageResult)** message result
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * result:  **(HistoryMessageResult)** message result
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
 
 
 
@@ -734,7 +666,7 @@ delete_p2p_chat(mid, from_uid, to_uid, callback = None, timeout = 0)
 
 ```python
 class BasicCallback(object):
-    def callback(self, error):
+    def callback(self, error_code):
         pass
 ```
 
@@ -742,7 +674,7 @@ class BasicCallback(object):
 
 * in async implementation, return None
 * in sync implementation:
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
 
 
 
@@ -763,7 +695,7 @@ delete_group_chat(mid, from_uid, gid, callback = None, timeout = 0)
 
 ```python
 class BasicCallback(object):
-    def callback(self, error):
+    def callback(self, error_code):
         pass
 ```
 
@@ -771,7 +703,7 @@ class BasicCallback(object):
 
 * in async implementation, return None
 * in sync implementation:
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
 
 
 
@@ -792,7 +724,7 @@ delete_room_chat(mid, from_uid, rid, callback = None, timeout = 0)
 
 ```python
 class BasicCallback(object):
-    def callback(self, error):
+    def callback(self, error_code):
         pass
 ```
 
@@ -800,7 +732,7 @@ class BasicCallback(object):
 
 * in async implementation, return None
 * in sync implementation:
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
 
 
 
@@ -820,7 +752,7 @@ delete_broadcast_chat(mid, from_uid, callback = None, timeout = 0)
 
 ```python
 class BasicCallback(object):
-    def callback(self, error):
+    def callback(self, error_code):
         pass
 ```
 
@@ -828,7 +760,7 @@ class BasicCallback(object):
 
 * in async implementation, return None
 * in sync implementation:
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
 
 
 
@@ -849,25 +781,19 @@ get_p2p_chat_info(mid, from_uid, to_uid, callback = None, timeout = 0)
 
 ```python
 class GetMessageInfoCallback(object):
-    def callback(self, result, error):
+    def callback(self, result, error_code):
         pass
-      
-# result is:
-class MessageInfoResult(object):
-    def __init__(self):
-        self.id = 0
-        self.mtype = 0
-        self.msg = str()
-        self.attrs = str()
-        self.mtime = 0
 ```
+
+#### callback params: 
+ * result is: RetrievedMessage Please refer [RTM Structures](Structures.md).
 
 #### return:
 
 * in async implementation, return None
 * in sync implementation:
-  * result:  **(MessageInfoResult)** message result
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * result:  **(RetrievedMessage)** message result
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
 
 
 
@@ -888,25 +814,19 @@ get_group_chat_info(mid, from_uid, gid, callback = None, timeout = 0)
 
 ```python
 class GetMessageInfoCallback(object):
-    def callback(self, result, error):
+    def callback(self, result, error_code):
         pass
-      
-# result is:
-class MessageInfoResult(object):
-    def __init__(self):
-        self.id = 0
-        self.mtype = 0
-        self.msg = str()
-        self.attrs = str()
-        self.mtime = 0
 ```
+
+#### callback params: 
+ * result is: RetrievedMessage Please refer [RTM Structures](Structures.md).
 
 #### return:
 
 * in async implementation, return None
 * in sync implementation:
-  * result:  **(MessageInfoResult)** message result
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * result:  **(RetrievedMessage)** message result
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
 
 
 
@@ -927,25 +847,19 @@ get_room_chat_info(mid, from_uid, rid, callback = None, timeout = 0)
 
 ```python
 class GetMessageInfoCallback(object):
-    def callback(self, result, error):
+    def callback(self, result, error_code):
         pass
-      
-# result is:
-class MessageInfoResult(object):
-    def __init__(self):
-        self.id = 0
-        self.mtype = 0
-        self.msg = str()
-        self.attrs = str()
-        self.mtime = 0
 ```
+
+#### callback params: 
+ * result is: RetrievedMessage Please refer [RTM Structures](Structures.md).
 
 #### return:
 
 * in async implementation, return None
 * in sync implementation:
-  * result:  **(MessageInfoResult)** message result
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * result:  **(RetrievedMessage)** message result
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
 
 
 
@@ -965,25 +879,19 @@ get_broadcast_chat_info(self, mid, from_uid, callback = None, timeout = 0)
 
 ```python
 class GetMessageInfoCallback(object):
-    def callback(self, result, error):
+    def callback(self, result, error_code):
         pass
-      
-# result is:
-class MessageInfoResult(object):
-    def __init__(self):
-        self.id = 0
-        self.mtype = 0
-        self.msg = str()
-        self.attrs = str()
-        self.mtime = 0
 ```
+
+#### callback params: 
+ * result is: RetrievedMessage Please refer [RTM Structures](Structures.md).
 
 #### return:
 
 * in async implementation, return None
 * in sync implementation:
-  * result:  **(MessageInfoResult)** message result
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * result:  **(RetrievedMessage)** message result
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
 
 
 
@@ -1008,7 +916,7 @@ translate(text, dst, src = None, ttype = 'chat', profanity = 'off', post_profani
 
 ```python
 class TranslateCallback(object):
-    def callback(self, result, error):
+    def callback(self, result, error_code):
         pass
       
 # result is:
@@ -1025,7 +933,7 @@ class TranslateResult(object):
 * in async implementation, return None
 * in sync implementation:
   * result:  **(TranslateResult)** translate result
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
 
 
 
@@ -1046,7 +954,7 @@ profanity(text, classify = False, uid = None, callback = None, timeout = 0)
 
 ```python
 class ProfanityCallback(object):
-    def callback(self, result, error):
+    def callback(self, result, error_code):
         pass
       
 # result is:
@@ -1061,7 +969,7 @@ class ProfanityResult(object):
 * in async implementation, return None
 * in sync implementation:
   * result:  **(ProfanityResult)** profanity result
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
 
 
 
@@ -1070,7 +978,7 @@ class ProfanityResult(object):
 ##### transcribe api
 
 ```
-transcribe(audio, uid = None, profanity_filter = False, callback = None, timeout = 0)
+transcribe(audio, uid = None, profanity_filter = False, callback = None, timeout = 120)
 ```
 
 #### params:
@@ -1082,7 +990,7 @@ transcribe(audio, uid = None, profanity_filter = False, callback = None, timeout
 
 ```python
 class TranscribeCallback(object):
-    def callback(self, result, error):
+    def callback(self, result, error_code):
         pass
       
 # result is:
@@ -1097,9 +1005,52 @@ class TranscribeResult(object):
 * in async implementation, return None
 * in sync implementation:
   * result:  **(TranscribeResult)** transcribe result
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
 
 
+### transcribe_message
+
+##### transcribe with message
+
+```
+transcribe_message(self, from_uid, mid, to_id, message_type, profanity_filter = None, callback = None, timeout = 120)
+```
+
+#### params:
+
+* from_uid: **(Required | int)**  user id
+* mid: **(Required | int)**  message id
+* to_id: **(Required | int)**  rid/gid/to/0
+* message_type: **(Required | MessageType)**  message type as below:
+```
+class MessageType(Enum):
+    P2P_MESSAGE = 1
+    GROUP_MESSAGE = 2
+    ROOM_MESSAGE = 3
+    BROADCAST_MESSAGE = 4
+```
+* profanity_filter: **(Optional | bool)**  profanity the result
+* callback: **(Optional | a sub-class of TranscribeCallback )**  used in async implementation
+
+```python
+class TranscribeCallback(object):
+    def callback(self, result, error_code):
+        pass
+
+# result is:
+class TranscribeResult(object):
+    def __init__(self):
+        self.text = str()
+        self.lang = str()
+```
+
+#### return:
+
+* in async implementation, return None
+* in sync implementation:
+  * result:  **(TranscribeResult)** transcribe result
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
+  
 
 ### profanity
 
@@ -1118,7 +1069,7 @@ profanity(text, classify = False, uid = None, callback = None, timeout = 0)
 
 ```python
 class ProfanityCallback(object):
-    def callback(self, result, error):
+    def callback(self, result, error_code):
         pass
       
 # result is:
@@ -1133,5 +1084,5 @@ class ProfanityResult(object):
 * in async implementation, return None
 * in sync implementation:
   * result:  **(ProfanityResult)** profanity result
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
 

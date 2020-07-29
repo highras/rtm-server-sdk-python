@@ -21,7 +21,7 @@ get_token(uid, callback = None, timeout = 0)
 
 ```python
 class GetTokenCallback(object):
-    def callback(self, token, error):
+    def callback(self, token, error_code):
         pass
 ```
 
@@ -30,7 +30,7 @@ class GetTokenCallback(object):
 * in async implementation, return None
 * in sync implementation:
   * token:  **(str)** the login token when quest is successful, or None when failed
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -49,7 +49,7 @@ remove_token(uid, callback = None, timeout = 0)
 
 ```python
 class BasicCallback(object):
-    def callback(self, error):
+    def callback(self, error_code):
         pass
 ```
 
@@ -59,7 +59,7 @@ class BasicCallback(object):
 
 * in sync implementation:
 
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
   
 

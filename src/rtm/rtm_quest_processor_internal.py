@@ -8,14 +8,10 @@ import time
 from enum import Enum
 from fpnn import *
 from .rtm_quest_processor import *
+from .rtm_server_structures import *
 
 DUP_FILTER_CLEAN_INTERVAL_SECONDS = 300
 DUP_FILTER_TRIGGER_CLEAN_COUNT = 1000
-
-class ChatMessageType(Enum):
-    TEXT = 30
-    AUDIO = 31
-    CMD = 32
 
 class DupP2PMessageKey():
     def __init__(self, sender, receiver, mid):
@@ -89,7 +85,7 @@ class DupMessageFilter(object):
 class RtmQuestProcessorInternal(QuestProcessor):
     def __init__(self):
         self.processor = None
-        self.dup_filter = DupMessageFilter() 
+        self.dup_filter = DupMessageFilter()
 
     def set_processor(self, processor):
         self.processor = processor
@@ -111,6 +107,20 @@ class RtmQuestProcessorInternal(QuestProcessor):
         except:
             pass
 
+    def build_message(self, from_uid, to_id, mtype, mid, msg, attrs, mtime):
+        message = RTMMessage()
+        message.from_uid = from_uid
+        message.to_id = to_id
+        message.message_type = mtype
+        message.message_id = mid
+        message.message = msg
+        message.attrs = attrs
+        message.modified_time = mtime
+        if mtype == ChatMessageType.AUDIO:
+            message.audio_info = build_audio_info(msg)
+            message.message = message.audio_info.recognized_text
+        return message
+
     def pushmsg(self, connection, quest):
         connection.send_answer(Answer())
         from_uid = quest.get('from', None)
@@ -121,15 +131,18 @@ class RtmQuestProcessorInternal(QuestProcessor):
         attrs = quest.get('attrs', None)
         mtime = quest.get('mtime', None)
         if not self.dup_filter.is_dup('p2p', DupP2PMessageKey(from_uid, to_uid, mid)):
+            message = build_message(from_uid, to_uid, mtype, mid, msg, attrs, mtime)
             try:
                 if mtype == ChatMessageType.TEXT.value:
-                    self.processor.push_chat(from_uid, to_uid, mid, msg, attrs, mtime)
+                    self.processor.push_chat(message)
                 elif mtype == ChatMessageType.AUDIO.value:
-                    self.processor.push_audio(from_uid, to_uid, mid, msg, attrs, mtime)
+                    self.processor.push_audio(message)
                 elif mtype == ChatMessageType.CMD.value:
-                    self.processor.push_cmd(from_uid, to_uid, mid, msg, attrs, mtime)
+                    self.processor.push_cmd(message)
+                elif mtype >= 40 and mtype <= 50:
+                    self.processor.push_file(message)
                 else:
-                    self.processor.push_message(from_uid, to_uid, mtype, mid, msg, attrs, mtime)
+                    self.processor.push_message(message)
             except:
                 pass
 
@@ -143,15 +156,18 @@ class RtmQuestProcessorInternal(QuestProcessor):
         attrs = quest.get('attrs', None)
         mtime = quest.get('mtime', None)
         if not self.dup_filter.is_dup('group', DupGroupMessageKey(from_uid, gid, mid)):
+            message = build_message(from_uid, gid, mtype, mid, msg, attrs, mtime)
             try:
                 if mtype == ChatMessageType.TEXT.value:
-                    self.processor.push_group_chat(from_uid, gid, mid, msg, attrs, mtime)
+                    self.processor.push_group_chat(message)
                 elif mtype == ChatMessageType.AUDIO.value:
-                    self.processor.push_group_audio(from_uid, gid, mid, msg, attrs, mtime)
+                    self.processor.push_group_audio(message)
                 elif mtype == ChatMessageType.CMD.value:
-                    self.processor.push_group_cmd(from_uid, gid, mid, msg, attrs, mtime)
+                    self.processor.push_group_cmd(message)
+                elif mtype >= 40 and mtype <= 50:
+                    self.processor.push_group_file(message)
                 else:
-                    self.processor.push_group_message(from_uid, gid, mtype, mid, msg, attrs, mtime)
+                    self.processor.push_group_message(message)
             except:
                 pass
 
@@ -165,59 +181,17 @@ class RtmQuestProcessorInternal(QuestProcessor):
         attrs = quest.get('attrs', None)
         mtime = quest.get('mtime', None)
         if not self.dup_filter.is_dup('room', DupRoomMessageKey(from_uid, rid, mid)):
+            message = build_message(from_uid, rid, mtype, mid, msg, attrs, mtime)
             try:
                 if mtype == ChatMessageType.TEXT.value:
-                    self.processor.push_room_chat(from_uid, rid, mid, msg, attrs, mtime)
+                    self.processor.push_room_chat(message)
                 elif mtype == ChatMessageType.AUDIO.value:
-                    self.processor.push_room_audio(from_uid, rid, mid, msg, attrs, mtime)
+                    self.processor.push_room_audio(message)
                 elif mtype == ChatMessageType.CMD.value:
-                    self.processor.push_room_cmd(from_uid, rid, mid, msg, attrs, mtime)
+                    self.processor.push_room_cmd(message)
+                elif mtype >= 40 and mtype <= 50:
+                    self.processor.push_room_file(message)
                 else:
-                    self.processor.push_room_message(from_uid, rid, mtype, mid, msg, attrs, mtime)
-            except:
-                pass
-    
-    def pushfile(self, connection, quest):
-        connection.send_answer(Answer())
-        from_uid = quest.get('from', None)
-        to_uid = quest.get('to', None)
-        mtype = quest.get('mtype', None)
-        mid = quest.get('mid', None)
-        msg = quest.get('msg', None)
-        attrs = quest.get('attrs', None)
-        mtime = quest.get('mtime', None)
-        if not self.dup_filter.is_dup('p2p', DupP2PMessageKey(from_uid, to_uid, mid)):
-            try:
-                self.processor.push_file(from_uid, to_uid, mtype, mid, msg, attrs, mtime)
-            except:
-                pass 
-
-    def pushgroupfile(self, connection, quest):
-        connection.send_answer(Answer())
-        from_uid = quest.get('from', None)
-        gid = quest.get('gid', None)
-        mtype = quest.get('mtype', None)
-        mid = quest.get('mid', None)
-        msg = quest.get('msg', None)
-        attrs = quest.get('attrs', None)
-        mtime = quest.get('mtime', None)
-        if not self.dup_filter.is_dup('group', DupGroupMessageKey(from_uid, gid, mid)):
-            try:
-                self.processor.push_group_file(from_uid, gid, mtype, mid, msg, attrs, mtime)
-            except:
-                pass
-
-    def pushroomfile(self, connection, quest):
-        connection.send_answer(Answer())
-        from_uid = quest.get('from', None)
-        rid = quest.get('rid', None)
-        mtype = quest.get('mtype', None)
-        mid = quest.get('mid', None)
-        msg = quest.get('msg', None)
-        attrs = quest.get('attrs', None)
-        mtime = quest.get('mtime', None)
-        if not self.dup_filter.is_dup('room', DupRoomMessageKey(from_uid, rid, mid)):
-            try:
-                self.processor.push_room_file(from_uid, rid, mtype, mid, msg, attrs, mtime)
+                    self.processor.push_room_message(message)
             except:
                 pass

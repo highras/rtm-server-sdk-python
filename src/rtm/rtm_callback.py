@@ -3,6 +3,13 @@ import sys
 sys.path.append("..")
 from fpnn import *
 
+class RTMConnectionCallback(object):
+    def connected(self, connection_id, endpoint, connected, is_reconnect):
+        pass
+
+    def closed(self, connection_id, endpoint, caused_by_error, is_reconnect):
+        pass
+
 class QuestError(object):
     def __init__(self, code, message):
         self.code = code

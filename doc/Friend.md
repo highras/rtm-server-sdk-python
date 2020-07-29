@@ -22,7 +22,7 @@ add_friends(uid, friends, callback = None, timeout = 0)
 
 ```python
 class BasicCallback(object):
-    def callback(self, error):
+    def callback(self, error_code):
         pass
 ```
 
@@ -30,7 +30,7 @@ class BasicCallback(object):
 
 * in async implementation, return None
 * in sync implementation:
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -50,7 +50,7 @@ delete_friends(self, uid, friends, callback = None, timeout = 0)
 
 ```python
 class BasicCallback(object):
-    def callback(self, error):
+    def callback(self, error_code):
         pass
 ```
 
@@ -58,7 +58,7 @@ class BasicCallback(object):
 
 * in async implementation, return None
 * in sync implementation:
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -77,7 +77,7 @@ get_friends(uid, callback = None, timeout = 0)
 
 ```python
 class GetFriendsCallback(object):
-    def callback(self, uids, error):
+    def callback(self, uids, error_code):
         pass
 ```
 
@@ -86,7 +86,7 @@ class GetFriendsCallback(object):
 * in async implementation, return None
 * in sync implementation:
   * uids:  **([])** user list
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -106,7 +106,7 @@ is_friend(uid, fuid, callback = None, timeout = 0)
 
 ```python
 class IsFriendCallback(object):
-    def callback(self, ok, error):
+    def callback(self, ok, error_code):
         pass
 ```
 
@@ -115,7 +115,7 @@ class IsFriendCallback(object):
 * in async implementation, return None
 * in sync implementation:
   * ok:  **(bool)** is friend
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -135,7 +135,7 @@ is_friends(self, uid, fuids, callback = None, timeout = 0)
 
 ```python
 class IsFriendsCallback(object):
-    def callback(self, fuids, error):
+    def callback(self, fuids, error_code):
         pass
 ```
 
@@ -144,7 +144,7 @@ class IsFriendsCallback(object):
 * in async implementation, return None
 * in sync implementation:
   * fuids:  **([int])** friend user id list
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 ### add_blacks
@@ -163,7 +163,7 @@ add_blacks(uid, blacks, callback = None, timeout = 0)
 
 ```python
 class BasicCallback(object):
-    def callback(self, error):
+    def callback(self, error_code):
         pass
 ```
 
@@ -171,7 +171,7 @@ class BasicCallback(object):
 
 * in async implementation, return None
 * in sync implementation:
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -191,7 +191,7 @@ delete_blacks(self, uid, blacks, callback = None, timeout = 0)
 
 ```python
 class BasicCallback(object):
-    def callback(self, error):
+    def callback(self, error_code):
         pass
 ```
 
@@ -199,7 +199,7 @@ class BasicCallback(object):
 
 * in async implementation, return None
 * in sync implementation:
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -218,7 +218,7 @@ get_blacks(uid, callback = None, timeout = 0)
 
 ```python
 class GetBlacksCallback(object):
-    def callback(self, uids, error):
+    def callback(self, uids, error_code):
         pass
 ```
 
@@ -227,7 +227,7 @@ class GetBlacksCallback(object):
 * in async implementation, return None
 * in sync implementation:
   * uids:  **([])** user list
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -247,7 +247,7 @@ is_black(uid, buid, callback = None, timeout = 0)
 
 ```python
 class IsBlackCallback(object):
-    def callback(self, ok, error):
+    def callback(self, ok, error_code):
         pass
 ```
 
@@ -256,7 +256,7 @@ class IsBlackCallback(object):
 * in async implementation, return None
 * in sync implementation:
   * ok:  **(bool)** is friend
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -276,7 +276,7 @@ is_blacks(self, uid, buids, callback = None, timeout = 0)
 
 ```python
 class IsBlacksCallback(object):
-    def callback(self, buids, error):
+    def callback(self, buids, error_code):
         pass
 ```
 
@@ -285,7 +285,7 @@ class IsBlacksCallback(object):
 * in async implementation, return None
 * in sync implementation:
   * fuids:  **([int])** friend user id list
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 

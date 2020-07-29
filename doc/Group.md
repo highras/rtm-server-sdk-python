@@ -22,7 +22,7 @@ add_group_members(gid, uids, callback = None, timeout = 0)
 
 ```python
 class BasicCallback(object):
-    def callback(self, error):
+    def callback(self, error_code):
         pass
 ```
 
@@ -30,7 +30,7 @@ class BasicCallback(object):
 
 * in async implementation, return None
 * in sync implementation:
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -50,7 +50,7 @@ delete_group_members(gid, uids, callback = None, timeout = 0)
 
 ```python
 class BasicCallback(object):
-    def callback(self, error):
+    def callback(self, error_code):
         pass
 ```
 
@@ -58,7 +58,7 @@ class BasicCallback(object):
 
 * in async implementation, return None
 * in sync implementation:
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -77,7 +77,7 @@ delete_group(gid, callback = None, timeout = 0)
 
 ```python
 class BasicCallback(object):
-    def callback(self, error):
+    def callback(self, error_code):
         pass
 ```
 
@@ -85,7 +85,7 @@ class BasicCallback(object):
 
 * in async implementation, return None
 * in sync implementation:
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -104,7 +104,7 @@ get_group_members(gid, callback = None, timeout = 0)
 
 ```python
 class GetGroupMembersCallback(object):
-    def callback(self, uids, error):
+    def callback(self, uids, error_code):
         pass
 ```
 
@@ -113,7 +113,7 @@ class GetGroupMembersCallback(object):
 * in async implementation, return None
 * in sync implementation:
   * uids:  **([])** user list
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -133,7 +133,7 @@ is_group_member(gid, uid, callback = None, timeout = 0)
 
 ```python
 class IsGroupMemberCallback(object):
-    def callback(self, ok, error):
+    def callback(self, ok, error_code):
         pass
 ```
 
@@ -142,7 +142,7 @@ class IsGroupMemberCallback(object):
 * in async implementation, return None
 * in sync implementation:
   * ok:  **(bool)** is member
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -161,7 +161,7 @@ get_user_groups(uid, callback = None, timeout = 0)
 
 ```python
 class GetUserGroupsCallback(object):
-    def callback(self, gids, error):
+    def callback(self, gids, error_code):
         pass
 ```
 
@@ -170,7 +170,7 @@ class GetUserGroupsCallback(object):
 * in async implementation, return None
 * in sync implementation:
   * gids:  **([])** group list
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -191,7 +191,7 @@ add_group_ban(gid, uid, btime, callback = None, timeout = 0)
 
 ```python
 class BasicCallback(object):
-    def callback(self, error):
+    def callback(self, error_code):
         pass
 ```
 
@@ -199,7 +199,7 @@ class BasicCallback(object):
 
 * in async implementation, return None
 * in sync implementation:
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -219,7 +219,7 @@ remove_group_ban(gid, uid, callback = None, timeout = 0)
 
 ```python
 class BasicCallback(object):
-    def callback(self, error):
+    def callback(self, error_code):
         pass
 ```
 
@@ -227,7 +227,7 @@ class BasicCallback(object):
 
 * in async implementation, return None
 * in sync implementation:
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -247,7 +247,7 @@ is_ban_of_group(gid, uid, callback = None, timeout = 0)
 
 ```python
 class IsBanOfGroupCallback(object):
-    def callback(self, ok, error):
+    def callback(self, ok, error_code):
         pass
 ```
 
@@ -256,7 +256,7 @@ class IsBanOfGroupCallback(object):
 * in async implementation, return None
 * in sync implementation:
   * ok:  **(bool)** is ban
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -277,7 +277,7 @@ set_group_info(gid, oinfo = None, pinfo = None, callback = None, timeout = 0)
 
 ```python
 class BasicCallback(object):
-    def callback(self, error):
+    def callback(self, error_code):
         pass
 ```
 
@@ -285,7 +285,7 @@ class BasicCallback(object):
 
 * in async implementation, return None
 * in sync implementation:
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -304,7 +304,7 @@ get_group_info(gid, callback = None, timeout = 0)
 
 ```python
 class GetGroupInfoCallback(object):
-    def callback(self, oinfo, pinfo, error):
+    def callback(self, oinfo, pinfo, error_code):
         pass
 ```
 
@@ -314,7 +314,7 @@ class GetGroupInfoCallback(object):
 * in sync implementation:
   * oinfo:  **(int)** public info
   * pinfo:  **(int)** private info
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 

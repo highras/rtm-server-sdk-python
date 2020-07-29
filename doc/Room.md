@@ -22,7 +22,7 @@ add_room_member(rid, uid, callback = None, timeout = 0)
 
 ```python
 class BasicCallback(object):
-    def callback(self, error):
+    def callback(self, error_code):
         pass
 ```
 
@@ -30,7 +30,7 @@ class BasicCallback(object):
 
 * in async implementation, return None
 * in sync implementation:
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -50,7 +50,7 @@ delete_room_member(rid, uid, callback = None, timeout = 0)
 
 ```python
 class BasicCallback(object):
-    def callback(self, error):
+    def callback(self, error_code):
         pass
 ```
 
@@ -58,7 +58,7 @@ class BasicCallback(object):
 
 * in async implementation, return None
 * in sync implementation:
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -79,7 +79,7 @@ set_room_info(rid, oinfo = None, pinfo = None, callback = None, timeout = 0)
 
 ```python
 class BasicCallback(object):
-    def callback(self, error):
+    def callback(self, error_code):
         pass
 ```
 
@@ -87,7 +87,7 @@ class BasicCallback(object):
 
 * in async implementation, return None
 * in sync implementation:
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -116,7 +116,7 @@ class GetRoomInfoCallback(object):
 * in sync implementation:
   * oinfo:  **(int)** public info
   * pinfo:  **(int)** private info
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -137,7 +137,7 @@ add_room_ban(rid, uid, btime, callback = None, timeout = 0)
 
 ```python
 class BasicCallback(object):
-    def callback(self, error):
+    def callback(self, error_code):
         pass
 ```
 
@@ -145,7 +145,7 @@ class BasicCallback(object):
 
 * in async implementation, return None
 * in sync implementation:
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -165,7 +165,7 @@ remove_room_ban(rid, uid, callback = None, timeout = 0)
 
 ```python
 class BasicCallback(object):
-    def callback(self, error):
+    def callback(self, error_code):
         pass
 ```
 
@@ -173,7 +173,7 @@ class BasicCallback(object):
 
 * in async implementation, return None
 * in sync implementation:
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -193,7 +193,7 @@ is_ban_of_room(rid, uid, callback = None, timeout = 0)
 
 ```python
 class IsBanOfRoomCallback(object):
-    def callback(self, ok, error):
+    def callback(self, ok, error_code):
         pass
 ```
 
@@ -202,7 +202,7 @@ class IsBanOfRoomCallback(object):
 * in async implementation, return None
 * in sync implementation:
   * ok:  **(bool)** is ban
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 

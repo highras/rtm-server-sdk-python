@@ -26,7 +26,7 @@ file_token(from_uid, cmd, to_uids = None, to_uid = None, rid = None, gid = None,
 
 ```python
 class FileTokenCallback(object):
-    def callback(self, token, endpoint, error):
+    def callback(self, token, endpoint, error_code):
         pass
 ```
 
@@ -35,7 +35,7 @@ class FileTokenCallback(object):
 * in async implementation, return None
 * in sync implementation:
   * result:  **(FileTokenCallback)** transcribe result
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error_code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -57,7 +57,7 @@ send_file(from_uid, to_uid, mtype, file, callback = None, timeout = 0)
 
 ```python
 class SendMessageCallback(object):
-    def callback(self, mid, mtime, error):
+    def callback(self, mid, mtime, error_code):
         pass
 ```
 
@@ -67,7 +67,7 @@ class SendMessageCallback(object):
 * in sync implementation:
   * mid:  **(int)** message id
   * mtime:  **(int)** server returned timestamp in seconds
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error_code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -90,7 +90,7 @@ send_files(from_uid, to_uids, mtype, file, callback = None, timeout = 0)
 
 ```python
 class SendMessageCallback(object):
-    def callback(self, mid, mtime, error):
+    def callback(self, mid, mtime, error_code):
         pass
 ```
 
@@ -100,7 +100,7 @@ class SendMessageCallback(object):
 * in sync implementation:
   * mid:  **(int)** message id
   * mtime:  **(int)** server returned timestamp in seconds
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -122,7 +122,7 @@ send_group_file(from_uid, gid, mtype, file, callback = None, timeout = 0)
 
 ```python
 class SendMessageCallback(object):
-    def callback(self, mid, mtime, error):
+    def callback(self, mid, mtime, error_code):
         pass
 ```
 
@@ -132,7 +132,7 @@ class SendMessageCallback(object):
 * in sync implementation:
   * mid:  **(int)** message id
   * mtime:  **(int)** server returned timestamp in seconds
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -154,7 +154,7 @@ send_room_file(from_uid, rid, mtype, file, callback = None, timeout = 0)
 
 ```python
 class SendMessageCallback(object):
-    def callback(self, mid, mtime, error):
+    def callback(self, mid, mtime, error_code):
         pass
 ```
 
@@ -164,7 +164,7 @@ class SendMessageCallback(object):
 * in sync implementation:
   * mid:  **(int)** message id
   * mtime:  **(int)** server returned timestamp in seconds
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -185,7 +185,7 @@ broadcast_file(from_uid, mtype, file, callback = None, timeout = 0)
 
 ```python
 class SendMessageCallback(object):
-    def callback(self, mid, mtime, error):
+    def callback(self, mid, mtime, error_code):
         pass
 ```
 
@@ -195,7 +195,7 @@ class SendMessageCallback(object):
 * in sync implementation:
   * mid:  **(int)** message id
   * mtime:  **(int)** server returned timestamp in seconds
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 

@@ -23,7 +23,7 @@ add_device(uid, app_type, device_token, callback = None, timeout = 0)
 
 ```python
 class BasicCallback(object):
-    def callback(self, error):
+    def callback(self, error_code):
         pass
 ```
 
@@ -31,7 +31,7 @@ class BasicCallback(object):
 
 * in async implementation, return None
 * in sync implementation:
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -51,7 +51,7 @@ remove_device(uid, device_token, callback = None, timeout = 0)
 
 ```python
 class BasicCallback(object):
-    def callback(self, error):
+    def callback(self, error_code):
         pass
 ```
 
@@ -59,7 +59,7 @@ class BasicCallback(object):
 
 * in async implementation, return None
 * in sync implementation:
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 

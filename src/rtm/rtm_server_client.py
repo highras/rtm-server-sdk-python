@@ -6,36 +6,68 @@ import threading
 import hashlib
 import time
 from enum import Enum
+import copy
 from fpnn import *
+from .rtm_server_config import *
 from .rtm_callback import *
 from .rtm_callback_internal import *
 from .rtm_quest_processor_internal import *
-
-RTM_SDK_VERSION = '2.1.0'
-RTM_API_VERSION = '2.0.3'
-
-class MessageType(Enum):
-    P2P_MESSAGE = 1
-    GROUP_MESSAGE = 2
-    ROOM_MESSAGE = 3
-    BROADCAST_MESSAGE = 4
+from .rtm_server_structures import *
 
 class RTMServerClient(object):
-    def __init__(self, pid, secret, endpoint, reconnect, timeout = 0):
+
+    class RegressiveStatus(object):
+        def __init__(self):
+            self.connect_failed_count = 0
+            self.regressive_connect_interval = RegressiveStrategy.first_interval_seconds
+
+    def __init__(self, pid, secret, endpoint):
+        self.stop = False
         self.pid = pid
         self.secret = secret
         arr = endpoint.split(':')
-        self.client = TCPClient(arr[0], int(arr[1]), reconnect)
-        self.client.set_quest_timeout(timeout)
+        self.auto_reconnect = True
+        self.connect_callback = None
+        self.client = TCPClient(arr[0], int(arr[1]))
+        self.client.set_quest_timeout(RTMServerConfig.GLOBAL_QUEST_TIMEOUT_SECONDS * 1000)
+        self.client.set_connect_timeout(RTMServerConfig.GLOBAL_CONNECT_TIMEOUT_SECONDS * 1000)
+        self.config_callback()
         self.seq_lock = threading.Lock()
         self.seq = 0
+        self.error_recorder = None
         self.processor = None
+        self.is_reconnect = False
+        self.can_reconnect = False
+        self.last_connect_time = 0
+        self.last_close_time = 0
+        self.require_close = False
+        self.file_gate_lock = threading.Lock()
+        self.file_gate_dict = {}
+        self.check_thread = threading.Thread(target=RTMServerClient.check, args=(self,))
+        self.check_thread.setDaemon(True)
+        self.check_thread.start()
+        self.reconnect_lock = threading.Lock()
+        self.listen_status_info = ListenStatusInfo()
+        self.regressive_strategy = RegressiveStrategy()
+        self.regressive_status = RTMServerClient.RegressiveStatus()
+        self.listen_lock = threading.Lock()
+
+    def set_auto_connect(self, auto_connect):
+        self.auto_reconnect = auto_connect
+        self.client.set_auto_connect(auto_connect)
+
+    def set_regressive_strategy(self, strategy):
+        self.regressive_strategy = strategy
+        self.regressive_status.regressive_connect_interval = self.regressive_strategy.first_interval_seconds
 
     def set_quest_timeout(self, timeout):
-        self.client.set_quest_timeout(timeout)
+        self.client.set_quest_timeout(timeout * 1000)
+
+    def set_connect_timeout(self, timeout):
+        self.client.set_connect_timeout(timeout * 1000)
 
     def set_connection_callback(self, callback):
-        self.client.set_connection_callback(callback)
+        self.connect_callback = callback
 
     def enable_encryptor_by_pem_file(self, pem_pub_file, curve_name = 'secp256k1', strength = 128):
         self.client.enable_encryptor_by_pem_file(pem_pub_file, curve_name, strength)
@@ -46,13 +78,84 @@ class RTMServerClient(object):
         self.processor.set_processor(processor)
         self.client.set_quest_processor(self.processor)
 
+    def set_error_recorder(self, recorder):
+        self.error_recorder = recorder
+        self.client.set_error_recorder(recorder)
+
+    def config_callback(self):
+        class RTMConnectCallbackInternal(ConnectionCallback):
+            def __init__(self, client):
+                self.client = client
+
+            def connected(self, connection_id, endpoint, connected):
+                with self.client.reconnect_lock:
+                    if connected:
+                        self.client.can_reconnect = True
+                        self.client.last_connect_time = int(time.time()*1000.0)
+
+                    if connected and self.client.is_reconnect:
+                        self.client.listen_status_restoration()
+
+                    if self.client.connect_callback != None:
+                        self.client.connect_callback.connected(connection_id, endpoint, connected, self.client.is_reconnect)
+
+                    if not connected and self.client.can_reconnect:
+                        self.client.try_reconnect()
+
+            def closed(self, connection_id, endpoint, caused_by_error):
+                with self.client.reconnect_lock:
+                    self.client.last_close_time = int(time.time()*1000.0)
+
+                    if self.client.connect_callback != None:
+                        self.client.connect_callback.closed(connection_id, endpoint, caused_by_error, self.client.is_reconnect)
+
+                    if not self.client.require_close and self.client.auto_reconnect:
+                        self.client.is_reconnect = True
+                        if self.client.last_close_time - self.client.last_connect_time > self.client.regressive_strategy.connect_failed_max_interval_milliseconds:
+                            self.client.regressive_status.connect_failed_count = 0
+                            self.client.regressive_status.regressive_connect_interval = self.client.regressive_strategy.first_interval_seconds
+                        self.client.try_reconnect()
+        self.client.set_connection_callback(RTMConnectCallbackInternal(self))
+
+    def listen_status_restoration(self):
+        class MySetListenCallback(BasicCallback):
+            def callback(self, error_code):
+                if error_code != FPNN_ERROR.FPNN_EC_OK and self.error_recorder != None:
+                    self.error_recorder.record_error("set_listen after reconnect error, code: " + str(error_code))
+                    
+        if self.listen_status_info.all_p2p or self.listen_status_info.all_groups or self.listen_status_info.all_rooms or self.listen_status_info.all_events:
+            self.set_all_listen(self.listen_status_info.all_p2p, self.listen_status_info.all_groups, self.listen_status_info.all_rooms, self.listen_status_info.all_events, MySetListenCallback())
+
+        if len(self.listen_status_info.user_ids) > 0 or len(self.listen_status_info.group_ids) > 0 or len(self.listen_status_info.room_ids) > 0 or len(self.listen_status_info.events) > 0:
+            self.set_listen(self.listen_status_info.group_ids, self.listen_status_info.room_ids, self.listen_status_info.user_ids, self.listen_status_info.events, MySetListenCallback())
+
+    def try_reconnect(self):
+        if self.regressive_status.connect_failed_count < self.regressive_strategy.start_connect_failed_count:
+            self.regressive_status.connect_failed_count += 1
+            self.client.reconnect()
+        else:
+            self.client.engine.thread_pool_execute(self.regressive_reconnect, ())
+
+    def regressive_reconnect(self):
+        sleep_interval = 0
+        with self.reconnect_lock:
+            sleep_interval = self.regressive_status.regressive_connect_interval
+            self.regressive_status.regressive_connect_interval += (self.regressive_strategy.max_interval_seconds - self.regressive_strategy.first_interval_seconds) / self.regressive_strategy.linear_regressive_count
+        time.sleep(sleep_interval)
+        with self.reconnect_lock:
+            self.regressive_status.connect_failed_count += 1
+            self.client.reconnect()
+
     def close(self):
+        self.require_close = True
         self.client.close()
 
     def reconnect(self):
         self.client.reconnect()
 
     def destory(self):
+        self.require_close = True
+        self.stop = True
         self.client.destory()
 
     def gen_mid(self):
@@ -79,9 +182,9 @@ class RTMServerClient(object):
         })
         callback_internal = GetTokenCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def kickout(self, uid, ce = None, callback = None, timeout = 0):
@@ -100,9 +203,9 @@ class RTMServerClient(object):
             quest.param('ce', ce)
         callback_internal = BasicCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def add_device(self, uid, app_type, device_token, callback = None, timeout = 0):
@@ -121,9 +224,9 @@ class RTMServerClient(object):
         })
         callback_internal = BasicCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def remove_device(self, uid, device_token, callback = None, timeout = 0):
@@ -141,9 +244,9 @@ class RTMServerClient(object):
         })
         callback_internal = BasicCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def remove_token(self, uid, callback = None, timeout = 0):
@@ -160,12 +263,12 @@ class RTMServerClient(object):
         })
         callback_internal = BasicCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
-    def send_message(self, mtype, from_uid, to_uid, msg, attrs, mid = 0, callback = None, timeout = 0):
+    def send_message(self, mtype, from_uid, to_uid, message, attrs, mid = 0, callback = None, timeout = 0):
         if callback != None and not isinstance(callback, SendMessageCallback):
             raise Exception('callback type error')
         ts = int(time.time())
@@ -181,17 +284,17 @@ class RTMServerClient(object):
             'from' : from_uid,
             'to' : to_uid,
             'mid' : mid,
-            'msg' : msg,
+            'msg' : message,
             'attrs' : attrs
         })
         callback_internal = SendMessageCallbackInternal(callback, mid)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
-    def send_messages(self, mtype, from_uid, to_uids, msg, attrs, mid = 0, callback = None, timeout = 0):
+    def send_messages(self, mtype, from_uid, to_uids, message, attrs, mid = 0, callback = None, timeout = 0):
         if callback != None and not isinstance(callback, SendMessageCallback):
             raise Exception('callback type error')
         ts = int(time.time())
@@ -207,17 +310,17 @@ class RTMServerClient(object):
             'from' : from_uid,
             'tos' : to_uids,
             'mid' : mid,
-            'msg' : msg,
+            'msg' : message,
             'attrs' : attrs
         })
         callback_internal = SendMessageCallbackInternal(callback, mid)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
-    def send_group_message(self, mtype, from_uid, gid, msg, attrs, mid = 0, callback = None, timeout = 0):
+    def send_group_message(self, mtype, from_uid, gid, message, attrs, mid = 0, callback = None, timeout = 0):
         if callback != None and not isinstance(callback, SendMessageCallback):
             raise Exception('callback type error')
         ts = int(time.time())
@@ -233,17 +336,17 @@ class RTMServerClient(object):
             'from' : from_uid,
             'gid' : gid,
             'mid' : mid,
-            'msg' : msg,
+            'msg' : message,
             'attrs' : attrs
         })
         callback_internal = SendMessageCallbackInternal(callback, mid)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
-    def send_room_message(self, mtype, from_uid, rid, msg, attrs, mid = 0, callback = None, timeout = 0):
+    def send_room_message(self, mtype, from_uid, rid, message, attrs, mid = 0, callback = None, timeout = 0):
         if callback != None and not isinstance(callback, SendMessageCallback):
             raise Exception('callback type error')
         ts = int(time.time())
@@ -259,17 +362,17 @@ class RTMServerClient(object):
             'from' : from_uid,
             'rid' : rid,
             'mid' : mid,
-            'msg' : msg,
+            'msg' : message,
             'attrs' : attrs
         })
         callback_internal = SendMessageCallbackInternal(callback, mid)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
-    def broadcast_message(self, mtype, from_uid, msg, attrs, mid = 0, callback = None, timeout = 0):
+    def broadcast_message(self, mtype, from_uid, message, attrs, mid = 0, callback = None, timeout = 0):
         if callback != None and not isinstance(callback, SendMessageCallback):
             raise Exception('callback type error')
         ts = int(time.time())
@@ -284,14 +387,14 @@ class RTMServerClient(object):
             'mtype' : mtype,
             'from' : from_uid,
             'mid' : mid,
-            'msg' : msg,
+            'msg' : message,
             'attrs' : attrs
         })
         callback_internal = SendMessageCallbackInternal(callback, mid)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def get_group_message(self, uid, gid, desc, num, begin = None, end = None, lastid = None, mtypes = None, callback = None, timeout = 0):
@@ -319,9 +422,9 @@ class RTMServerClient(object):
             quest.param('mtypes', mtypes)
         callback_internal = GetGroupMessageCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def get_room_message(self, uid, rid, desc, num, begin = None, end = None, lastid = None, mtypes = None, callback = None, timeout = 0):
@@ -349,9 +452,9 @@ class RTMServerClient(object):
             quest.param('mtypes', mtypes)
         callback_internal = GetRoomMessageCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def get_broadcast_message(self, uid, desc, num, begin = None, end = None, lastid = None, mtypes = None, callback = None, timeout = 0):
@@ -378,9 +481,9 @@ class RTMServerClient(object):
             quest.param('mtypes', mtypes)
         callback_internal = GetBroadcastMessageCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def get_p2p_message(self, uid, ouid, desc, num, begin = None, end = None, lastid = None, mtypes = None, callback = None, timeout = 0):
@@ -406,11 +509,11 @@ class RTMServerClient(object):
             quest.param('lastid', lastid)
         if mtypes != None:
             quest.param('mtypes', mtypes)
-        callback_internal = GetP2PMessageCallbackInternal(callback)
+        callback_internal = GetP2PMessageCallbackInternal(uid, ouid, callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def delete_message(self, mid, from_uid, xid, mtype, callback = None, timeout = 0):
@@ -430,9 +533,9 @@ class RTMServerClient(object):
         })
         callback_internal = BasicCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def delete_p2p_message(self, mid, from_uid, to_uid, callback = None, timeout = 0):
@@ -464,9 +567,9 @@ class RTMServerClient(object):
         })
         callback_internal = GetMessageInfoCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def get_p2p_message_info(self, mid, from_uid, to_uid, callback = None, timeout = 0):
@@ -481,50 +584,50 @@ class RTMServerClient(object):
     def get_broadcast_message_info(self, mid, from_uid, callback = None, timeout = 0):
         return self.get_message_info(mid, from_uid, 0, MessageType.BROADCAST_MESSAGE.value, callback, timeout)
 
-    def send_chat(self, from_uid, to_uid, msg, attrs, mid = 0, callback = None, timeout = 0):
-        return self.send_message(ChatMessageType.TEXT.value, from_uid, to_uid, msg, attrs, mid, callback, timeout)
+    def send_chat(self, from_uid, to_uid, message, attrs, mid = 0, callback = None, timeout = 0):
+        return self.send_message(ChatMessageType.TEXT.value, from_uid, to_uid, message, attrs, mid, callback, timeout)
 
-    def send_chats(self, from_uid, to_uids, msg, attrs, mid = 0, callback = None, timeout = 0):
-        return self.send_messages(ChatMessageType.TEXT.value, from_uid, to_uids, msg, attrs, mid, callback, timeout)
+    def send_chats(self, from_uid, to_uids, message, attrs, mid = 0, callback = None, timeout = 0):
+        return self.send_messages(ChatMessageType.TEXT.value, from_uid, to_uids, message, attrs, mid, callback, timeout)
 
-    def send_group_chat(self, from_uid, gid, msg, attrs, mid = 0, callback = None, timeout = 0):
-        return self.send_group_message(ChatMessageType.TEXT.value, from_uid, gid, msg, attrs, mid, callback, timeout)
+    def send_group_chat(self, from_uid, gid, message, attrs, mid = 0, callback = None, timeout = 0):
+        return self.send_group_message(ChatMessageType.TEXT.value, from_uid, gid, message, attrs, mid, callback, timeout)
 
-    def send_room_chat(self, from_uid, rid, msg, attrs, mid = 0, callback = None, timeout = 0):
-        return self.send_room_message(ChatMessageType.TEXT.value, from_uid, rid, msg, attrs, mid, callback, timeout)
+    def send_room_chat(self, from_uid, rid, message, attrs, mid = 0, callback = None, timeout = 0):
+        return self.send_room_message(ChatMessageType.TEXT.value, from_uid, rid, message, attrs, mid, callback, timeout)
 
-    def broadcast_chat(self, from_uid, msg, attrs, mid = 0, callback = None, timeout = 0):
-        return self.broadcast_message(ChatMessageType.TEXT.value, from_uid, msg, attrs, mid, callback, timeout)
+    def broadcast_chat(self, from_uid, message, attrs, mid = 0, callback = None, timeout = 0):
+        return self.broadcast_message(ChatMessageType.TEXT.value, from_uid, message, attrs, mid, callback, timeout)
 
-    def send_audio(self, from_uid, to_uid, msg, attrs, mid = 0, callback = None, timeout = 0):
-        return self.send_message(ChatMessageType.AUDIO.value, from_uid, to_uid, msg, attrs, mid, callback, timeout)
+    def send_audio(self, from_uid, to_uid, message, attrs, mid = 0, callback = None, timeout = 0):
+        return self.send_message(ChatMessageType.AUDIO.value, from_uid, to_uid, message, attrs, mid, callback, timeout)
 
-    def send_audios(self, from_uid, to_uids, msg, attrs, mid = 0, callback = None, timeout = 0):
-        return self.send_messages(ChatMessageType.AUDIO.value, from_uid, to_uids, msg, attrs, mid, callback, timeout)
+    def send_audios(self, from_uid, to_uids, message, attrs, mid = 0, callback = None, timeout = 0):
+        return self.send_messages(ChatMessageType.AUDIO.value, from_uid, to_uids, message, attrs, mid, callback, timeout)
 
-    def send_group_audio(self, from_uid, gid, msg, attrs, mid = 0, callback = None, timeout = 0):
-        return self.send_group_message(ChatMessageType.AUDIO.value, from_uid, gid, msg, attrs, mid, callback, timeout)
+    def send_group_audio(self, from_uid, gid, message, attrs, mid = 0, callback = None, timeout = 0):
+        return self.send_group_message(ChatMessageType.AUDIO.value, from_uid, gid, message, attrs, mid, callback, timeout)
 
-    def send_room_audio(self, from_uid, rid, msg, attrs, mid = 0, callback = None, timeout = 0):
-        return self.send_room_message(ChatMessageType.AUDIO.value, from_uid, rid, msg, attrs, mid, callback, timeout)
+    def send_room_audio(self, from_uid, rid, message, attrs, mid = 0, callback = None, timeout = 0):
+        return self.send_room_message(ChatMessageType.AUDIO.value, from_uid, rid, message, attrs, mid, callback, timeout)
 
-    def broadcast_audio(self, from_uid, msg, attrs, mid = 0, callback = None, timeout = 0):
-        return self.broadcast_message(ChatMessageType.AUDIO.value, from_uid, msg, attrs, mid, callback, timeout)
+    def broadcast_audio(self, from_uid, message, attrs, mid = 0, callback = None, timeout = 0):
+        return self.broadcast_message(ChatMessageType.AUDIO.value, from_uid, message, attrs, mid, callback, timeout)
 
-    def send_cmd(self, from_uid, to_uid, msg, attrs, mid = 0, callback = None, timeout = 0):
-        return self.send_message(ChatMessageType.CMD.value, from_uid, to_uid, msg, attrs, mid, callback, timeout)
+    def send_cmd(self, from_uid, to_uid, message, attrs, mid = 0, callback = None, timeout = 0):
+        return self.send_message(ChatMessageType.CMD.value, from_uid, to_uid, message, attrs, mid, callback, timeout)
 
-    def send_cmds(self, from_uid, to_uids, msg, attrs, mid = 0, callback = None, timeout = 0):
-        return self.send_messages(ChatMessageType.CMD.value, from_uid, to_uids, msg, attrs, mid, callback, timeout)
+    def send_cmds(self, from_uid, to_uids, message, attrs, mid = 0, callback = None, timeout = 0):
+        return self.send_messages(ChatMessageType.CMD.value, from_uid, to_uids, message, attrs, mid, callback, timeout)
 
-    def send_group_cmd(self, from_uid, gid, msg, attrs, mid = 0, callback = None, timeout = 0):
-        return self.send_group_message(ChatMessageType.CMD.value, from_uid, gid, msg, attrs, mid, callback, timeout)
+    def send_group_cmd(self, from_uid, gid, message, attrs, mid = 0, callback = None, timeout = 0):
+        return self.send_group_message(ChatMessageType.CMD.value, from_uid, gid, message, attrs, mid, callback, timeout)
 
-    def send_room_cmd(self, from_uid, rid, msg, attrs, mid = 0, callback = None, timeout = 0):
-        return self.send_room_message(ChatMessageType.CMD.value, from_uid, rid, msg, attrs, mid, callback, timeout)
+    def send_room_cmd(self, from_uid, rid, message, attrs, mid = 0, callback = None, timeout = 0):
+        return self.send_room_message(ChatMessageType.CMD.value, from_uid, rid, message, attrs, mid, callback, timeout)
 
-    def broadcast_cmd(self, from_uid, msg, attrs, mid = 0, callback = None, timeout = 0):
-        return self.broadcast_message(ChatMessageType.CMD.value, from_uid, msg, attrs, mid, callback, timeout)
+    def broadcast_cmd(self, from_uid, message, attrs, mid = 0, callback = None, timeout = 0):
+        return self.broadcast_message(ChatMessageType.CMD.value, from_uid, message, attrs, mid, callback, timeout)
 
     def get_group_chat(self, uid, gid, desc, num, begin = None, end = None, lastid = None, callback = None, timeout = 0):
         return self.get_group_message(uid, gid, desc, num, begin, end, lastid, [ChatMessageType.TEXT.value, ChatMessageType.AUDIO.value, ChatMessageType.CMD.value], callback, timeout)
@@ -583,9 +686,9 @@ class RTMServerClient(object):
             quest.param('uid', uid)
         callback_internal = TranslateCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def profanity(self, text, classify = False, uid = None, callback = None, timeout = 0):
@@ -605,12 +708,12 @@ class RTMServerClient(object):
             quest.param('uid', uid)
         callback_internal = ProfanityCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
-    def transcribe(self, audio, uid = None, profanity_filter = False, callback = None, timeout = 0):
+    def transcribe(self, audio, uid = None, profanity_filter = False, callback = None, timeout = 120):
         if callback != None and not isinstance(callback, TranscribeCallback):
             raise Exception('callback type error')
         ts = int(time.time())
@@ -620,19 +723,44 @@ class RTMServerClient(object):
             'sign' : self.gen_sign(salt, 'transcribe', ts),
             'salt' : salt,
             'ts' : ts,
-            'audio' : audio,
-            'profanityFilter' : profanity_filter
+            'audio' : audio
         })
+        if profanity_filter != None:
+            quest.param('profanityFilter', profanity_filter)
         if uid != None:
             quest.param('uid', uid)
         callback_internal = TranscribeCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
-    def file_token(self, from_uid, cmd, to_uidss = None, to_uid = None, rid = None, gid = None, callback = None, timeout = 0):
+    def transcribe_message(self, from_uid, mid, to_id, message_type, profanity_filter = None, callback = None, timeout = 120):
+        if callback != None and not isinstance(callback, TranscribeCallback):
+            raise Exception('callback type error')
+        ts = int(time.time())
+        salt = self.gen_mid()
+        quest = Quest('stranscribe', params = {
+            'pid' : self.pid,
+            'sign' : self.gen_sign(salt, 'transcribe', ts),
+            'salt' : salt,
+            'ts' : ts,
+            'from' : from_uid,
+            'mid' : mid,
+            'xid' : to_id,
+            'type' : int(message_type.value)
+        })
+        if profanity_filter != None:
+            quest.param('profanityFilter', profanity_filter)
+        callback_internal = TranscribeCallbackInternal(callback)
+        if callback != None:
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
+        else:
+            answer = self.client.send_quest(quest, None, timeout * 1000)
+            return callback_internal.get_result(answer)
+
+    def file_token(self, from_uid, cmd, to_uids = None, to_uid = None, rid = None, gid = None, callback = None, timeout = 0):
         if callback != None and not isinstance(callback, FileTokenCallback):
             raise Exception('callback type error')
         if cmd not in ['sendfile', 'sendfiles', 'sendroomfile', 'sendgroupfile', 'broadcastfile']:
@@ -659,214 +787,221 @@ class RTMServerClient(object):
             quest.param('gid', gid)
         callback_internal = FileTokenCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
-    def send_file(self, from_uid, to_uid, mtype, file, callback = None, timeout = 0):
-        if callback != None and not isinstance(callback, SendFileCallback):
-            raise Exception('callback type error')
+    def check(self):
+        while not self.stop:
+            time.sleep(1)
+            now = time.time()
+            with self.file_gate_lock:
+                for (endpoint, client_info) in  self.file_gate_dict.items(): 
+                    if now - client_info.update_time >= RTMServerConfig.FILE_GATE_CLIENT_HOLDING_SECONDS:
+                        client_info.client.close()
+                        del self.file_gate_dict[endpoint]
+
+    class FileGateInfo(object):
+        def __init__(self, client):
+            self.update_time = time.time()
+            self.client = client
+
+    class SendFileInfo(object):
+        def __init__(self, timeout):
+            if timeout > 0:
+                self.remain_timeout = timeout * 1000
+            else:
+                self.remain_timeout = RTMServerConfig.GLOBAL_QUEST_TIMEOUT_SECONDS * 1000
+            self.send_type = ''
+            self.from_uid = 0
+            self.mtype = 0
+            self.file_path = ''
+            self.file_content = ''
+            self.token = ''
+            self.to_id = 0
+            self.to_ids = []
+
+    def fetch_file_client(self, endpoint, send_file_info):
+        client_info = None
+        with self.file_gate_lock:
+            client_info = self.file_gate_dict.get(endpoint, None)
+        if client_info != None:
+            return client_info
+
+        arr = endpoint.split(':')
+        client = TCPClient(arr[0], int(arr[1]))
+        client.set_connect_timeout(send_file_info.remain_timeout)
+        client.set_error_recorder(self.error_recorder)
+        
+        class FielGateConnectCallbackInternal(ConnectionCallback):
+            def __init__(self, client):
+                self.client = client
+
+            def connected(self, connection_id, endpoint, connected):
+                pass
+
+            def closed(self, connection_id, endpoint, caused_by_error):
+                with self.client.file_gate_lock:
+                    del self.client.file_gate_dict[endpoint]
+
+        client.set_connection_callback(FielGateConnectCallbackInternal(self))
+        if client.connect():
+            client_info = RTMServerClient.FileGateInfo(client)
+            with self.file_gate_lock:
+                self.file_gate_dict[endpoint] = client_info
+        return client_info
+
+    def get_send_file_quest(self, send_file_info):
+        sign = hashlib.md5((hashlib.md5(send_file_info.file_content).hexdigest().lower() + ':' + send_file_info.token).encode('utf-8')).hexdigest().lower()
+        quest = Quest(send_file_info.send_type, params = {
+            'pid' : self.pid,
+            'token' : send_file_info.token,
+            'mtype' : send_file_info.mtype,
+            'from' : send_file_info.from_uid,
+            'mid' : self.gen_mid(),
+            'file' : send_file_info.file_content
+        })
+        if send_file_info.send_type == 'sendfile':
+            quest.param('to', send_file_info.to_id)
+        if send_file_info.send_type == 'sendfiles':
+            quest.param('tos', send_file_info.to_ids)
+        if send_file_info.send_type == 'sendroomfile':
+            quest.param('rid', send_file_info.to_id)
+        if send_file_info.send_type == 'sendgroupfile':
+            quest.param('gid', send_file_info.to_id)
+        attrs = '{"sign":"' + sign + '"'
+        ext = ''
+        idx = send_file_info.file_path.rfind('.')
+        if idx >= 0:
+            ext = send_file_info.file_path[idx + 1:]
+        if len(ext) > 0:
+            attrs += ', "ext":"' + ext + '"'
+        attrs += '}'
+        quest.param('attrs', attrs)
+        return quest
+    
+    def real_send_file_sync(self, send_type, from_uid, mtype, file_path, to_id = None, to_ids = None, timeout = 0):
         content = ''
-        with open(file, 'rb') as f:
+        with open(file_path, 'rb') as f:
             content = f.read()
         if len(content) == 0:
             raise Exception('read file error')
-        token, endpoint, error = self.file_token(from_uid, 'sendfile', to = to_uid, timeout = timeout)
-        if error != None:
-            if callback == None:
-                return None, error
-            else:
-                callback.callback(None, error)
-                return
-        arr = endpoint.split(':')
-        file_client = TCPClient(arr[0], int(arr[1]), True)
-        file_client.set_quest_timeout(timeout)
-        sign = hashlib.md5((hashlib.md5(content).hexdigest().lower() + ':' + token).encode('utf-8')).hexdigest().lower()
-        quest = Quest('sendfile', params = {
-            'pid' : self.pid,
-            'token' : token,
-            'mtype' : mtype,
-            'from' : from_uid,
-            'to' : to_uid,
-            'mid' : self.gen_mid(),
-            'file' : content
-        })
-        attrs = '{"sign":"' + sign + '"'
-        file_arr = file.split('.')
-        if len(file_arr) >= 2:
-            attrs += ', "ext":"' + file_arr[len(file_arr) - 1] + '"'
-        attrs += '}'
-        quest.param('attrs', attrs)
-        callback_internal = SendFileCallbackInternal(callback)
-        if callback != None:
-            file_client.send_quest(quest, callback_internal, timeout)
-        else:
-            answer = file_client.send_quest(quest, None, timeout)
-            return callback_internal.get_result(answer)
 
-    def send_files(self, from_uid, to_uids, mtype, file, callback = None, timeout = 0):
+        send_file_info = RTMServerClient.SendFileInfo(timeout)
+        send_file_info.send_type = send_type
+        send_file_info.from_uid = from_uid
+        send_file_info.mtype = mtype
+        send_file_info.file_path = file_path
+        send_file_info.file_content = content
+        send_file_info.to_id = to_id
+        send_file_info.to_ids = to_ids
+
+        mts = time.time() * 1000
+        send_file_info.token, endpoint, error_code = self.file_token(from_uid, send_type, to_uids = to_ids, to_uid = to_id, rid = to_id, gid = to_id, timeout = send_file_info.remain_timeout)
+        
+        if error_code != FPNN_ERROR.FPNN_EC_OK:
+            return None, error_code
+
+        send_file_info.remain_timeout -= (time.time() * 1000 - mts)
+        if send_file_info.remain_timeout <= 0:
+            return None, FPNN_ERROR.FPNN_EC_CORE_TIMEOUT
+
+        mts = time.time() * 1000
+        file_gate_client_info = self.fetch_file_client(endpoint, send_file_info)
+        file_gate_client = file_gate_client_info.client
+
+        send_file_info.remain_timeout -= (time.time() * 1000 - mts)
+        if send_file_info.remain_timeout <= 0:
+            return None, FPNN_ERROR.FPNN_EC_CORE_TIMEOUT
+
+        quest = self.get_send_file_quest(send_file_info)
+
+        callback_internal = SendFileCallbackInternal(None)
+        answer = file_gate_client.send_quest(quest, None, send_file_info.remain_timeout)
+        file_gate_client_info.update_time = time.time()
+        return callback_internal.get_result(answer)
+
+    def real_send_file_async(self, send_type, from_uid, mtype, file_path, to_id = None, to_ids = None, callback = None, timeout = 0):
         if callback != None and not isinstance(callback, SendFileCallback):
             raise Exception('callback type error')
         content = ''
-        with open(file, 'rb') as f:
+        with open(file_path, 'rb') as f:
             content = f.read()
         if len(content) == 0:
             raise Exception('read file error')
-        token, endpoint, error = self.file_token(from_uid, 'sendfiles', tos = to_uids, timeout = timeout)
-        if error != None:
-            if callback == None:
-                return None, error
-            else:
-                callback.callback(None, error)
-                return
-        arr = endpoint.split(':')
-        file_client = TCPClient(arr[0], int(arr[1]), True)
-        file_client.set_quest_timeout(timeout)
-        sign = hashlib.md5((hashlib.md5(content).hexdigest().lower() + ':' + token).encode('utf-8')).hexdigest().lower()
-        quest = Quest('sendfiles', params = {
-            'pid' : self.pid,
-            'token' : token,
-            'mtype' : mtype,
-            'from' : from_uid,
-            'tos' : to_uids,
-            'mid' : self.gen_mid(),
-            'file' : content
-        })
-        attrs = '{"sign":"' + sign + '"'
-        file_arr = file.split('.')
-        if len(file_arr) >= 2:
-            attrs += ', "ext":"' + file_arr[len(file_arr) - 1] + '"'
-        attrs += '}'
-        quest.param('attrs', attrs)
-        callback_internal = SendFileCallbackInternal(callback)
-        if callback != None:
-            file_client.send_quest(quest, callback_internal, timeout)
-        else:
-            answer = file_client.send_quest(quest, None, timeout)
-            return callback_internal.get_result(answer)
 
-    def send_room_file(self, from_uid, rid, mtype, file, callback = None, timeout = 0):
-        if callback != None and not isinstance(callback, SendFileCallback):
-            raise Exception('callback type error')
-        content = ''
-        with open(file, 'rb') as f:
-            content = f.read()
-        if len(content) == 0:
-            raise Exception('read file error')
-        token, endpoint, error = self.file_token(from_uid, 'sendroomfile', rid = rid, timeout = timeout)
-        if error != None:
-            if callback == None:
-                return None, error
-            else:
-                callback.callback(None, error)
-                return
-        arr = endpoint.split(':')
-        file_client = TCPClient(arr[0], int(arr[1]), True)
-        file_client.set_quest_timeout(timeout)
-        sign = hashlib.md5((hashlib.md5(content).hexdigest().lower() + ':' + token).encode('utf-8')).hexdigest().lower()
-        quest = Quest('sendroomfile', params = {
-            'pid' : self.pid,
-            'token' : token,
-            'mtype' : mtype,
-            'from' : from_uid,
-            'rid' : rid,
-            'mid' : self.gen_mid(),
-            'file' : content
-        })
-        attrs = '{"sign":"' + sign + '"'
-        file_arr = file.split('.')
-        if len(file_arr) >= 2:
-            attrs += ', "ext":"' + file_arr[len(file_arr) - 1] + '"'
-        attrs += '}'
-        quest.param('attrs', attrs)
-        callback_internal = SendFileCallbackInternal(callback)
-        if callback != None:
-            file_client.send_quest(quest, callback_internal, timeout)
-        else:
-            answer = file_client.send_quest(quest, None, timeout)
-            return callback_internal.get_result(answer)
+        send_file_info = RTMServerClient.SendFileInfo(timeout)
+        mts = time.time() * 1000
+        send_file_info.send_type = send_type
+        send_file_info.from_uid = from_uid
+        send_file_info.mtype = mtype
+        send_file_info.file_path = file_path
+        send_file_info.file_content = content
+        send_file_info.to_id = to_id
+        send_file_info.to_ids = to_ids
 
-    def broadcast_file(self, from_uid, mtype, file, callback = None, timeout = 0):
-        if callback != None and not isinstance(callback, SendFileCallback):
-            raise Exception('callback type error')
-        content = ''
-        with open(file, 'rb') as f:
-            content = f.read()
-        if len(content) == 0:
-            raise Exception('read file error')
-        token, endpoint, error = self.file_token(from_uid, 'broadcastfile', timeout = timeout)
-        if error != None:
-            if callback == None:
-                return None, error
-            else:
-                callback.callback(None, error)
-                return
-        arr = endpoint.split(':')
-        file_client = TCPClient(arr[0], int(arr[1]), True)
-        file_client.set_quest_timeout(timeout)
-        sign = hashlib.md5((hashlib.md5(content).hexdigest().lower() + ':' + token).encode('utf-8')).hexdigest().lower()
-        quest = Quest('broadcastfile', params = {
-            'pid' : self.pid,
-            'token' : token,
-            'mtype' : mtype,
-            'from' : from_uid,
-            'mid' : self.gen_mid(),
-            'file' : content
-        })
-        attrs = '{"sign":"' + sign + '"'
-        file_arr = file.split('.')
-        if len(file_arr) >= 2:
-            attrs += ', "ext":"' + file_arr[len(file_arr) - 1] + '"'
-        attrs += '}'
-        quest.param('attrs', attrs)
-        callback_internal = SendFileCallbackInternal(callback)
-        if callback != None:
-            file_client.send_quest(quest, callback_internal, timeout)
-        else:
-            answer = file_client.send_quest(quest, None, timeout)
-            return callback_internal.get_result(answer)
+        class MyFileTokenCallback(FileTokenCallback):
+            def __init__(self, client, callback, send_file_info, mts):
+                self.client = client
+                self.send_callback = callback
+                self.send_file_info = send_file_info
+                self.mts = mts
 
-    def send_group_file(self, from_uid, gid, mtype, file, callback = None, timeout = 0):
-        if callback != None and not isinstance(callback, SendFileCallback):
-            raise Exception('callback type error')
-        content = ''
-        with open(file, 'rb') as f:
-            content = f.read()
-        if len(content) == 0:
-            raise Exception('read file error')
-        token, endpoint, error = self.file_token(from_uid, 'sendgroupfile', gid = gid, timeout = timeout)
-        if error != None:
-            if callback == None:
-                return None, error
-            else:
-                callback.callback(None, error)
-                return
-        arr = endpoint.split(':')
-        file_client = TCPClient(arr[0], int(arr[1]), True)
-        file_client.set_quest_timeout(timeout)
-        sign = hashlib.md5((hashlib.md5(content).hexdigest().lower() + ':' + token).encode('utf-8')).hexdigest().lower()
-        quest = Quest('sendgroupfile', params = {
-            'pid' : self.pid,
-            'token' : token,
-            'mtype' : mtype,
-            'from' : from_uid,
-            'gid' : gid,
-            'mid' : self.gen_mid(),
-            'file' : content
-        })
-        attrs = '{"sign":"' + sign + '"'
-        file_arr = file.split('.')
-        if len(file_arr) >= 2:
-            attrs += ', "ext":"' + file_arr[len(file_arr) - 1] + '"'
-        attrs += '}'
-        quest.param('attrs', attrs)
-        callback_internal = SendFileCallbackInternal(callback)
-        if callback != None:
-            file_client.send_quest(quest, callback_internal, timeout)
+            def callback(self, token, endpoint, error_code):
+                if error_code == FPNN_ERROR.FPNN_EC_OK:
+                    self.send_file_info.remain_timeout -= (time.time() * 1000 - self.mts)
+                    if self.send_file_info.remain_timeout <= 0:
+                        self.send_callback.callback(None, FPNN_ERROR.FPNN_EC_CORE_TIMEOUT)
+                        return
+                    self.mts = time.time() * 1000
+                    file_gate_client_info = self.client.fetch_file_client(endpoint, self.send_file_info)
+                    file_gate_client = file_gate_client_info.client
+
+                    self.send_file_info.remain_timeout -= (time.time() * 1000 - self.mts)
+                    if self.send_file_info.remain_timeout <= 0:
+                        self.send_callback.callback(None, FPNN_ERROR.FPNN_EC_CORE_TIMEOUT)
+                        return
+
+                    send_file_info.token = token
+                    quest = self.client.get_send_file_quest(self.send_file_info)
+                    callback_internal = SendFileCallbackInternal(self.send_callback)
+                    file_gate_client.send_quest(quest, callback_internal, self.send_file_info.remain_timeout)
+                    file_gate_client_info.update_time = time.time()
+                else:
+                    self.send_callback.callback(None, error_code)
+
+        self.file_token(from_uid, send_type, to_uids = to_ids, to_uid = to_id, rid = to_id, gid = to_id,callback = MyFileTokenCallback(self, callback, send_file_info, mts), timeout = send_file_info.remain_timeout)
+
+    def send_file(self, from_uid, to_uid, mtype, file_path, callback = None, timeout = 0):
+        if callback == None:
+            return self.real_send_file_sync('sendfile', from_uid, mtype, file_path, to_id = to_uid, timeout = timeout)
         else:
-            answer = file_client.send_quest(quest, None, timeout)
-            return callback_internal.get_result(answer)
+            self.real_send_file_async('sendfile', from_uid, mtype, file_path, to_id = to_uid, callback = callback, timeout = timeout)
+
+    def send_files(self, from_uid, to_uids, mtype, file_path, callback = None, timeout = 0):
+        if callback == None:
+            return self.real_send_file_sync('sendfiles', from_uid, mtype, file_path, to_ids = to_uids, timeout = timeout)
+        else:
+            self.real_send_file_async('sendfiles', from_uid, mtype, file_path, to_ids = to_uids, callback = callback, timeout = timeout)
+
+    def send_room_file(self, from_uid, rid, mtype, file_path, callback = None, timeout = 0):
+        if callback == None:
+            return self.real_send_file_sync('sendroomfile', from_uid, mtype, file_path, to_id = rid, timeout = timeout)
+        else:
+            self.real_send_file_async('sendroomfile', from_uid, mtype, file_path, to_id = rid, callback = callback, timeout = timeout)
+
+    def broadcast_file(self, from_uid, mtype, file_path, callback = None, timeout = 0):
+        if callback == None:
+            return self.real_send_file_sync('broadcastfile', from_uid, mtype, file_path, timeout = timeout)
+        else:
+            self.real_send_file_async('broadcastfile', from_uid, mtype, file_path, callback = callback, timeout = timeout)
+    
+    def send_group_file(self, from_uid, gid, mtype, file_path, callback = None, timeout = 0):
+        if callback == None:
+            return self.real_send_file_sync('sendgroupfile', from_uid, mtype, file_path, to_id = gid, timeout = timeout)
+        else:
+            self.real_send_file_async('sendgroupfile', from_uid, mtype, file_path, to_id = gid, callback = callback, timeout = timeout)
 
     def get_online_users(self, uids, callback = None, timeout = 0):
         if callback != None and not isinstance(callback, GetOnlineUsersCallback):
@@ -882,9 +1017,9 @@ class RTMServerClient(object):
         })
         callback_internal = GetOnlineUsersCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def add_project_black(self, uid, btime, callback = None, timeout = 0):
@@ -902,9 +1037,9 @@ class RTMServerClient(object):
         })
         callback_internal = BasicCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def remove_project_black(self, uid, callback = None, timeout = 0):
@@ -921,9 +1056,9 @@ class RTMServerClient(object):
         })
         callback_internal = BasicCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def is_project_black(self, uid, callback = None, timeout = 0):
@@ -940,9 +1075,9 @@ class RTMServerClient(object):
         })
         callback_internal = IsProjectBlackCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def set_user_info(self, uid, oinfo = None, pinfo = None, callback = None, timeout = 0):
@@ -965,9 +1100,9 @@ class RTMServerClient(object):
             quest.param('pinfo', pinfo)
         callback_internal = BasicCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def get_user_info(self, uid, callback = None, timeout = 0):
@@ -984,9 +1119,9 @@ class RTMServerClient(object):
         })
         callback_internal = GetUserInfoCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def get_user_open_info(self, uids, callback = None, timeout = 0):
@@ -1003,9 +1138,9 @@ class RTMServerClient(object):
         })
         callback_internal = GetUserOpenInfoCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
         
     def add_friends(self, uid, friends, callback = None, timeout = 0):
@@ -1023,9 +1158,9 @@ class RTMServerClient(object):
         })
         callback_internal = BasicCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def delete_friends(self, uid, friends, callback = None, timeout = 0):
@@ -1043,9 +1178,9 @@ class RTMServerClient(object):
         })
         callback_internal = BasicCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def get_friends(self, uid, callback = None, timeout = 0):
@@ -1062,9 +1197,9 @@ class RTMServerClient(object):
         })
         callback_internal = GetFriendsCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def is_friend(self, uid, fuid, callback = None, timeout = 0):
@@ -1082,9 +1217,9 @@ class RTMServerClient(object):
         })
         callback_internal = IsFriendCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def is_friends(self, uid, fuids, callback = None, timeout = 0):
@@ -1102,9 +1237,9 @@ class RTMServerClient(object):
         })
         callback_internal = IsFriendsCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def add_blacks(self, uid, blacks, callback = None, timeout = 0):
@@ -1122,9 +1257,9 @@ class RTMServerClient(object):
         })
         callback_internal = BasicCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def delete_blacks(self, uid, blacks, callback = None, timeout = 0):
@@ -1142,9 +1277,9 @@ class RTMServerClient(object):
         })
         callback_internal = BasicCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def get_blacks(self, uid, callback = None, timeout = 0):
@@ -1161,9 +1296,9 @@ class RTMServerClient(object):
         })
         callback_internal = GetBlacksCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def is_black(self, uid, buid, callback = None, timeout = 0):
@@ -1181,9 +1316,9 @@ class RTMServerClient(object):
         })
         callback_internal = IsBlackCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def is_blacks(self, uid, buids, callback = None, timeout = 0):
@@ -1201,9 +1336,9 @@ class RTMServerClient(object):
         })
         callback_internal = IsBlacksCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def add_group_members(self, gid, uids, callback = None, timeout = 0):
@@ -1221,9 +1356,9 @@ class RTMServerClient(object):
         })
         callback_internal = BasicCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def delete_group_members(self, gid, uids, callback = None, timeout = 0):
@@ -1241,9 +1376,9 @@ class RTMServerClient(object):
         })
         callback_internal = BasicCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def delete_group(self, gid, callback = None, timeout = 0):
@@ -1260,9 +1395,9 @@ class RTMServerClient(object):
         })
         callback_internal = BasicCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def get_group_members(self, gid, callback = None, timeout = 0):
@@ -1279,9 +1414,9 @@ class RTMServerClient(object):
         })
         callback_internal = GetGroupMembersCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def is_group_member(self, gid, uid, callback = None, timeout = 0):
@@ -1299,9 +1434,9 @@ class RTMServerClient(object):
         })
         callback_internal = IsGroupMemberCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def get_user_groups(self, uid, callback = None, timeout = 0):
@@ -1318,9 +1453,9 @@ class RTMServerClient(object):
         })
         callback_internal = GetUserGroupsCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
         
     def add_group_ban(self, gid, uid, btime, callback = None, timeout = 0):
@@ -1339,9 +1474,9 @@ class RTMServerClient(object):
         })
         callback_internal = BasicCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def remove_group_ban(self, gid, uid, callback = None, timeout = 0):
@@ -1359,9 +1494,9 @@ class RTMServerClient(object):
         })
         callback_internal = BasicCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
         
     def is_ban_of_group(self, gid, uid, callback = None, timeout = 0):
@@ -1379,9 +1514,9 @@ class RTMServerClient(object):
         })
         callback_internal = IsGroupMemberCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
         
     def set_group_info(self, gid, oinfo = None, pinfo = None, callback = None, timeout = 0):
@@ -1404,9 +1539,9 @@ class RTMServerClient(object):
             quest.param('pinfo', pinfo)
         callback_internal = BasicCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def get_group_info(self, gid, callback = None, timeout = 0):
@@ -1423,9 +1558,9 @@ class RTMServerClient(object):
         })
         callback_internal = GetGroupInfoCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def add_room_ban(self, rid, uid, btime, callback = None, timeout = 0):
@@ -1444,9 +1579,9 @@ class RTMServerClient(object):
         })
         callback_internal = BasicCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def remove_room_ban(self, rid, uid, callback = None, timeout = 0):
@@ -1464,9 +1599,9 @@ class RTMServerClient(object):
         })
         callback_internal = BasicCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
         
     def is_ban_of_room(self, rid, uid, callback = None, timeout = 0):
@@ -1484,9 +1619,9 @@ class RTMServerClient(object):
         })
         callback_internal = IsBanOfRoomCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
 
@@ -1505,9 +1640,9 @@ class RTMServerClient(object):
         })
         callback_internal = BasicCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def delete_room_member(self, rid, uid, callback = None, timeout = 0):
@@ -1525,9 +1660,9 @@ class RTMServerClient(object):
         })
         callback_internal = BasicCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def set_room_info(self, rid, oinfo = None, pinfo = None, callback = None, timeout = 0):
@@ -1550,9 +1685,9 @@ class RTMServerClient(object):
             quest.param('pinfo', pinfo)
         callback_internal = BasicCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def get_room_info(self, rid, callback = None, timeout = 0):
@@ -1569,9 +1704,9 @@ class RTMServerClient(object):
         })
         callback_internal = GetRoomInfoCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def add_listen(self, gids = None, rids = None, uids = None, events = None, callback = None, timeout = 0):
@@ -1587,19 +1722,26 @@ class RTMServerClient(object):
             'salt' : salt,
             'ts' : ts
         })
+
+        listen_status = copy.deepcopy(self.listen_status_info)
         if gids != None:
             quest.param('gids', gids)
+            listen_status.group_ids.update(gids)
         if rids != None:
             quest.param('rids', rids)
+            listen_status.room_ids.update(rids)
         if uids != None:
             quest.param('uids', uids)
+            listen_status.user_ids.update(uids)
         if events != None:
             quest.param('events', events)
-        callback_internal = BasicCallbackInternal(callback)
+            listen_status.events.update(events)
+
+        callback_internal = ListenCallbackInternal(callback, self, listen_status)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def remove_listen(self, gids = None, rids = None, uids = None, events = None, callback = None, timeout = 0):
@@ -1615,19 +1757,26 @@ class RTMServerClient(object):
             'salt' : salt,
             'ts' : ts
         })
+
+        listen_status = copy.deepcopy(self.listen_status_info)
         if gids != None:
             quest.param('gids', gids)
+            listen_status.group_ids.difference_update(gids)
         if rids != None:
             quest.param('rids', rids)
+            listen_status.room_ids.difference_update(rids)
         if uids != None:
             quest.param('uids', uids)
+            listen_status.user_ids.difference_update(uids)
         if events != None:
             quest.param('events', events)
-        callback_internal = BasicCallbackInternal(callback)
+            listen_status.events.difference_update(events)
+
+        callback_internal = ListenCallbackInternal(callback, self, listen_status)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def set_listen(self, gids = None, rids = None, uids = None, events = None, callback = None, timeout = 0):
@@ -1643,19 +1792,26 @@ class RTMServerClient(object):
             'salt' : salt,
             'ts' : ts
         })
+
+        listen_status = copy.deepcopy(self.listen_status_info)
         if gids != None:
             quest.param('gids', gids)
+            listen_status.group_ids = gids
         if rids != None:
             quest.param('rids', rids)
+            listen_status.room_ids = rids
         if uids != None:
             quest.param('uids', uids)
+            listen_status.user_ids = uids
         if events != None:
             quest.param('events', events)
-        callback_internal = BasicCallbackInternal(callback)
+            listen_status.events = events
+
+        callback_internal = ListenCallbackInternal(callback, self, listen_status)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def set_all_listen(self, p2p = None, group = None, room = None, ev = None, callback = None, timeout = 0):
@@ -1671,19 +1827,26 @@ class RTMServerClient(object):
             'salt' : salt,
             'ts' : ts
         })
+
+        listen_status = copy.deepcopy(self.listen_status_info)
         if p2p != None:
             quest.param('p2p', p2p)
+            listen_status.all_p2p = p2p
         if group != None:
             quest.param('group', group)
+            listen_status.all_groups = group
         if room != None:
             quest.param('room', room)
+            listen_status.all_rooms = room
         if ev != None:
             quest.param('ev', ev)
-        callback_internal = BasicCallbackInternal(callback)
+            listen_status.all_events = ev
+
+        callback_internal = ListenCallbackInternal(callback, self, listen_status)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
     
     def data_set(self, uid, key, value, callback = None, timeout = 0):
@@ -1702,9 +1865,9 @@ class RTMServerClient(object):
         })
         callback_internal = BasicCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def data_get(self, uid, key, callback = None, timeout = 0):
@@ -1722,9 +1885,9 @@ class RTMServerClient(object):
         })
         callback_internal = DataGetCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
     def data_delete(self, uid, key, callback = None, timeout = 0):
@@ -1742,7 +1905,7 @@ class RTMServerClient(object):
         })
         callback_internal = BasicCallbackInternal(callback)
         if callback != None:
-            self.client.send_quest(quest, callback_internal, timeout)
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
-            answer = self.client.send_quest(quest, None, timeout)
+            answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)

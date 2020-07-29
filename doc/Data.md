@@ -23,7 +23,7 @@ data_set(uid, key, value, callback = None, timeout = 0)
 
 ```python
 class BasicCallback(object):
-    def callback(self, error):
+    def callback(self, error_code):
         pass
 ```
 
@@ -31,7 +31,7 @@ class BasicCallback(object):
 
 * in async implementation, return None
 * in sync implementation:
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -51,7 +51,7 @@ data_delete(uid, key, callback = None, timeout = 0)
 
 ```python
 class BasicCallback(object):
-    def callback(self, error):
+    def callback(self, error_code):
         pass
 ```
 
@@ -59,7 +59,7 @@ class BasicCallback(object):
 
 * in async implementation, return None
 * in sync implementation:
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -79,7 +79,7 @@ data_get(uid, key, callback = None, timeout = 0)
 
 ```python
 class DataGetCallback(object):
-    def callback(self, value, error):
+    def callback(self, value, error_code):
         pass
 ```
 
@@ -90,7 +90,7 @@ class DataGetCallback(object):
 * in sync implementation:
 
   * value:  **(str)** data value
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
   
 

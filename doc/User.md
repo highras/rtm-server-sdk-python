@@ -22,7 +22,7 @@ kickout(uid, ce = None, callback = None, timeout = 0)
 
 ```python
 class BasicCallback(object):
-    def callback(self, error):
+    def callback(self, error_code):
         pass
 ```
 
@@ -30,7 +30,7 @@ class BasicCallback(object):
 
 * in async implementation, return None
 * in sync implementation:
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -49,7 +49,7 @@ get_online_users(uids, callback = None, timeout = 0)
 
 ```python
 class GetOnlineUsersCallback(object):
-    def callback(self, uids, error):
+    def callback(self, uids, error_code):
         pass
 ```
 
@@ -58,7 +58,7 @@ class GetOnlineUsersCallback(object):
 * in async implementation, return None
 * in sync implementation:
   * uids:  **([int])** online uids result
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -78,7 +78,7 @@ add_project_black(uid, btime, callback = None, timeout = 0)
 
 ```python
 class BasicCallback(object):
-    def callback(self, error):
+    def callback(self, error_code):
         pass
 ```
 
@@ -86,7 +86,7 @@ class BasicCallback(object):
 
 * in async implementation, return None
 * in sync implementation:
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -105,7 +105,7 @@ remove_project_black(uid, callback = None, timeout = 0)
 
 ```python
 class BasicCallback(object):
-    def callback(self, error):
+    def callback(self, error_code):
         pass
 ```
 
@@ -113,7 +113,7 @@ class BasicCallback(object):
 
 * in async implementation, return None
 * in sync implementation:
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -132,7 +132,7 @@ is_project_black(uid, callback = None, timeout = 0)
 
 ```python
 class IsProjectBlackCallback(object):
-    def callback(self, ok, error):
+    def callback(self, ok, error_code):
         pass
 ```
 
@@ -141,7 +141,7 @@ class IsProjectBlackCallback(object):
 * in async implementation, return None
 * in sync implementation:
   * ok:  **(bool)** is in peoject black
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -162,7 +162,7 @@ set_user_info(uid, oinfo = None, pinfo = None, callback = None, timeout = 0)
 
 ```python
 class BasicCallback(object):
-    def callback(self, error):
+    def callback(self, error_code):
         pass
 ```
 
@@ -170,7 +170,7 @@ class BasicCallback(object):
 
 * in async implementation, return None
 * in sync implementation:
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -189,7 +189,7 @@ get_user_info(uid, callback = None, timeout = 0)
 
 ```python
 class GetUserInfoCallback(object):
-    def callback(self, oinfo, pinfo, error):
+    def callback(self, oinfo, pinfo, error_code):
         pass
 ```
 
@@ -199,7 +199,7 @@ class GetUserInfoCallback(object):
 * in sync implementation:
   * oinfo:  **(int)** public info
   * pinfo:  **(int)** private info
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
 
@@ -218,7 +218,7 @@ get_user_open_info(uids, callback = None, timeout = 0)
 
 ```python
 class GetUserOpenInfoCallback(object):
-    def callback(self, info, error):
+    def callback(self, info, error_code):
         pass
 ```
 
@@ -227,5 +227,5 @@ class GetUserOpenInfoCallback(object):
 * in async implementation, return None
 * in sync implementation:
   * info:  **(dict)** public info
-  * error:  **(QuestError)**   the error when quest is fail, or None when success
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
