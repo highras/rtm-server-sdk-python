@@ -34,7 +34,8 @@ class RTMServerClient(object):
         self.config_callback()
         self.seq_lock = threading.Lock()
         self.seq = 0
-        self.error_recorder = None
+        self.error_recorder = RTMServerConfig.ERROR_RECORDER
+        self.client.set_error_recorder(self.error_recorder)
         self.processor = None
         self.is_reconnect = False
         self.can_reconnect = False
@@ -51,6 +52,7 @@ class RTMServerClient(object):
         self.regressive_strategy = RegressiveStrategy()
         self.regressive_status = RTMServerClient.RegressiveStatus()
         self.listen_lock = threading.Lock()
+        
 
     def set_auto_connect(self, auto_connect):
         self.auto_reconnect = auto_connect
