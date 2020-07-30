@@ -145,7 +145,7 @@ def set_error_recorder(self, recorder)
 ### common params
 
 * each api has two common params: callback and timeout
-* timeout is the quest timeout in  **milliseconds**
+* timeout is the quest timeout in  **seconds**
 
 * each api has both synchronous and asynchronous implementation depends on the parameter callback：
 
