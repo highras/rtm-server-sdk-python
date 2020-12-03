@@ -1,6 +1,6 @@
 #encoding=utf8
 
-RTM_SDK_VERSION = '2.1.2'
+RTM_SDK_VERSION = '2.1.3'
 RTM_INTERFACE_VERSION = '2.2.0'
 
 class RTMServerConfig(object):
