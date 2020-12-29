@@ -986,8 +986,13 @@ def test_listen(client):
                 print("[Async set_listen error_code] : " + str(error_code))
     client.set_listen(gids = [11,22,33], rids = [44,55,66], uids = [77,88,99], events = ['login','logout'], callback = MySetAllListenCallback())
 
+class MyErrorRecorder(ErrorRecorder):
+    def record_error(self, message):
+        print("error: " + message)
+
 if  __name__ == "__main__":
     client = RTMServerClient(11000001, 'ef3617e5-e886-4a4e-9eef-7263c0320628', '161.189.171.91:13315')
+    client.set_error_recorder(MyErrorRecorder())
 
     print(RTM_SDK_VERSION)
     print(RTM_INTERFACE_VERSION)
@@ -1080,7 +1085,6 @@ if  __name__ == "__main__":
 
     client.set_quest_processor(MyRTMServerPushMonitor())
 
-    """
     test_token_and_system(client)
 
     test_send_message(client)
@@ -1110,9 +1114,8 @@ if  __name__ == "__main__":
     test_data(client)
 
     test_listen(client)
-    """
 
-    time.sleep(1000)
+    time.sleep(60)
 
     client.close()
     client.destory()
