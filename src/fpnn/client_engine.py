@@ -204,8 +204,6 @@ class ClientEngine(object):
             try:
                 os.read(self.read_notify_fd, 1)
             except BlockingIOError as error:
-                if ClientEngine.error_recorder != None:
-                    ClientEngine.error_recorder.record_error("consume notify got BlockingIOError")
                 break
             except IOError as error:
                 if error.errno == errno.EAGAIN or error.errno == errno.EWOULDBLOCK or error.errno == errno.EINTR:

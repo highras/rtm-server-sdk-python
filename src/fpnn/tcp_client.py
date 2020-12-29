@@ -16,7 +16,7 @@ from cryptography import utils
 
 __all__ = ('ConnectionCallback', 'QuestCallback', 'QuestProcessor', 'TCPClient', 'FPNN_SDK_VERSION')
 
-FPNN_SDK_VERSION = '2.0.5'
+FPNN_SDK_VERSION = '2.0.6'
 
 class ConnectionStatus(Enum):
     NoConnected = 1
