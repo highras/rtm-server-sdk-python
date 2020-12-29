@@ -1011,9 +1011,9 @@ if  __name__ == "__main__":
         def __init__(self):
             pass
 
-        def print_messagee(self, messag):
-            print("from_uid: ", messag.from_uid)
-            print("to_id: ", messag.to_id)
+        def print_messagee(self, message):
+            print("from_uid: ", message.from_uid)
+            print("to_id: ", message.to_id)
             print("message_type: ", message.message_type)
             print("message_id: ", message.message_id)
             print("message: ", message.message)
@@ -1045,7 +1045,7 @@ if  __name__ == "__main__":
             self.print_message(message)
 
         def push_event(self, pid, event, uid, time, endpoint, data):
-            self.print_message(message)
+            print("event: ", event)
 
         def push_file(self, message):
             self.print_message(message)
