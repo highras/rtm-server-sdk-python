@@ -1014,11 +1014,13 @@ if  __name__ == "__main__":
             print("message: ", message.message)
             print("attrs: ", message.attrs)
             print("modified_time: ", message.modified_time)
-            if message.audio_info != None:
-                print("audio_info.source_language: ", message.audio_info.source_language)
-                print("audio_info.recognized_language: ", message.audio_info.recognized_language)
-                print("audio_info.recognized_text: ", message.audio_info.recognized_text)
-                print("audio_info.duration: ", message.audio_info.duration)
+            if message.file_info != None:
+                print("file_info.url: ", message.file_info.url)
+                print("file_info.size: ", message.file_info.size)
+                print("file_info.surl: ", message.file_info.surl)
+                print("file_info.is_rtm_audio: ", message.file_info.is_rtm_audio)
+                print("file_info.language: ", message.file_info.language)
+                print("file_info.duration: ", message.file_info.duration)
             if message.translated_info != None:
                 print("translated_info.source_language", message.translated_info.source_language)
                 print("translated_info.target_language", message.translated_info.target_language)
@@ -1078,6 +1080,7 @@ if  __name__ == "__main__":
 
     client.set_quest_processor(MyRTMServerPushMonitor())
 
+    """
     test_token_and_system(client)
 
     test_send_message(client)
@@ -1107,9 +1110,9 @@ if  __name__ == "__main__":
     test_data(client)
 
     test_listen(client)
+    """
 
-    time.sleep(10)
-    #time.sleep(1000)
+    time.sleep(1000)
 
     client.close()
     client.destory()

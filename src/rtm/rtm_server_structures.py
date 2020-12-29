@@ -4,7 +4,6 @@ import json
 
 class ChatMessageType(Enum):
     TEXT = 30
-    AUDIO = 31
     CMD = 32
 
 class MessageType(Enum):
@@ -13,11 +12,13 @@ class MessageType(Enum):
     ROOM_MESSAGE = 3
     BROADCAST_MESSAGE = 4
 
-class AudioInfo(object):
+class FileInfo(object):
     def __init__(self):
-        self.source_language = ""
-        self.recognized_language = ""
-        self.recognized_text = ""
+        self.url = ""
+        self.size = 0
+        self.surl = ""
+        self.is_rtm_audio = False
+        self.language = ""
         self.duration = 0
 
 class TranslatedInfo(object):
@@ -34,6 +35,7 @@ class RetrievedMessage(object):
         self.message = None
         self.attrs = None
         self.modified_time = 0
+        self.file_info = None
 
 class RTMMessage(object):
     def __init__(self):
@@ -44,7 +46,8 @@ class RTMMessage(object):
         self.message = None
         self.attrs = None
         self.modified_time = 0
-        self.audio_info = None
+        self.translated_info = None
+        self.file_info = None
 
 class HistoryMessage(RTMMessage):
     def __init__(self):

@@ -107,6 +107,19 @@ class RtmQuestProcessorInternal(QuestProcessor):
         except:
             pass
 
+    def process_chat_message(self, msg):
+        if not isinstance(msg, dict):
+            return None
+        translated_info = TranslatedInfo()
+        try:
+            translated_info.source_language = msg['source']
+            translated_info.source_text = msg['sourceText']
+            translated_info.target_language = msg['target']
+            translated_info.target_text = msg['targetText']
+        except:
+            return None
+        return translated_info
+
     def build_message(self, from_uid, to_id, mtype, mid, msg, attrs, mtime):
         message = RTMMessage()
         message.from_uid = from_uid
@@ -116,9 +129,15 @@ class RtmQuestProcessorInternal(QuestProcessor):
         message.message = msg
         message.attrs = attrs
         message.modified_time = mtime
-        if mtype == ChatMessageType.AUDIO:
-            message.audio_info = build_audio_info(msg)
-            message.message = message.audio_info.recognized_text
+        if mtype == ChatMessageType.TEXT:
+            message.translated_info = process_chat_message(msg)
+            if message.translated_info != None:
+                if len(message.translated_info.target_text) > 0:
+                    message.message = message.translated_info.target_text
+                else:
+                    message.message = message.translated_info.source_text
+        elif mtype >= 40 and mtype <= 50:
+            message = RTMServerClient.build_file_info(message)
         return message
 
     def pushmsg(self, connection, quest):
@@ -135,8 +154,6 @@ class RtmQuestProcessorInternal(QuestProcessor):
             try:
                 if mtype == ChatMessageType.TEXT.value:
                     self.processor.push_chat(message)
-                elif mtype == ChatMessageType.AUDIO.value:
-                    self.processor.push_audio(message)
                 elif mtype == ChatMessageType.CMD.value:
                     self.processor.push_cmd(message)
                 elif mtype >= 40 and mtype <= 50:
@@ -160,8 +177,6 @@ class RtmQuestProcessorInternal(QuestProcessor):
             try:
                 if mtype == ChatMessageType.TEXT.value:
                     self.processor.push_group_chat(message)
-                elif mtype == ChatMessageType.AUDIO.value:
-                    self.processor.push_group_audio(message)
                 elif mtype == ChatMessageType.CMD.value:
                     self.processor.push_group_cmd(message)
                 elif mtype >= 40 and mtype <= 50:
@@ -185,8 +200,6 @@ class RtmQuestProcessorInternal(QuestProcessor):
             try:
                 if mtype == ChatMessageType.TEXT.value:
                     self.processor.push_room_chat(message)
-                elif mtype == ChatMessageType.AUDIO.value:
-                    self.processor.push_room_audio(message)
                 elif mtype == ChatMessageType.CMD.value:
                     self.processor.push_room_cmd(message)
                 elif mtype >= 40 and mtype <= 50:

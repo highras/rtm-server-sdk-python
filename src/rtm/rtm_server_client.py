@@ -7,6 +7,7 @@ import hashlib
 import time
 from enum import Enum
 import copy
+import json
 from fpnn import *
 from .rtm_server_config import *
 from .rtm_callback import *
@@ -168,6 +169,49 @@ class RTMServerClient(object):
     def gen_sign(self, salt, cmd, ts):
         return hashlib.md5((str(self.pid) + ':' + self.secret + ':' +
                 str(salt) + ':' + cmd + ':' + str(ts)).encode('utf-8')).hexdigest().upper()
+
+    @staticmethod
+    def parse_file_message(message):
+        try:
+            info_dict = json.loads(message.message)
+            message.file_info.url = info_dict.get('url', '')
+            message.file_info.size = info_dict.get('size', 0)
+            message.file_info.surl = info_dict.get('surl', '')
+            message.message = None
+        except:
+            pass
+        return message
+
+    @staticmethod
+    def parse_file_attrs(message):
+        try:
+            attrs_dict = json.loads(message.attrs)
+            rtmAttrsDict = attrs_dict['rtm']
+            file_type = rtmAttrsDict.get('type', None)
+            if file_type != None and file_type == 'audiomsg':
+                message.file_info.is_rtm_audio = True
+            if message.file_info.is_rtm_audio:
+                message.file_info.language = rtmAttrsDict.get('lang', '')
+                message.file_info.duration = rtmAttrsDict.get('duration', 0)
+
+            user_attrs_dict = attrs_dict['custom']
+            try:
+                message.attrs = json.dumps(user_attrs_dict)
+            except:
+                try:
+                    message.attrs = str(user_attrs_dict)
+                except:
+                    pass
+        except:
+            pass
+        return message
+
+    @staticmethod
+    def build_file_info(message):
+        message.file_info = FileInfo()
+        message = RTMServerClient.parse_file_message(message)
+        message = RTMServerClient.parse_file_attrs(message)
+        return message
 
     def get_token(self, uid, callback = None, timeout = 0):
         if callback != None and not isinstance(callback, GetTokenCallback):
