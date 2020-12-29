@@ -150,7 +150,7 @@ class RtmQuestProcessorInternal(QuestProcessor):
         attrs = quest.get('attrs', None)
         mtime = quest.get('mtime', None)
         if not self.dup_filter.is_dup('p2p', DupP2PMessageKey(from_uid, to_uid, mid)):
-            message = build_message(from_uid, to_uid, mtype, mid, msg, attrs, mtime)
+            message = self.build_message(from_uid, to_uid, mtype, mid, msg, attrs, mtime)
             try:
                 if mtype == ChatMessageType.TEXT.value:
                     self.processor.push_chat(message)
