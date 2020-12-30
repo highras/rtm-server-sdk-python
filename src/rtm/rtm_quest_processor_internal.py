@@ -107,19 +107,6 @@ class RtmQuestProcessorInternal(QuestProcessor):
         except:
             pass
 
-    def process_chat_message(self, msg):
-        if not isinstance(msg, dict):
-            return None
-        translated_info = TranslatedInfo()
-        try:
-            translated_info.source_language = msg['source']
-            translated_info.source_text = msg['sourceText']
-            translated_info.target_language = msg['target']
-            translated_info.target_text = msg['targetText']
-        except:
-            return None
-        return translated_info
-
     def build_message(self, from_uid, to_id, mtype, mid, msg, attrs, mtime):
         message = RTMMessage()
         message.from_uid = from_uid
@@ -129,14 +116,7 @@ class RtmQuestProcessorInternal(QuestProcessor):
         message.message = msg
         message.attrs = attrs
         message.modified_time = mtime
-        if mtype == ChatMessageType.TEXT:
-            message.translated_info = process_chat_message(msg)
-            if message.translated_info != None:
-                if len(message.translated_info.target_text) > 0:
-                    message.message = message.translated_info.target_text
-                else:
-                    message.message = message.translated_info.source_text
-        elif mtype >= 40 and mtype <= 50:
+        if mtype >= 40 and mtype <= 50:
             message = RTMServerClient.build_file_info(message)
         return message
 

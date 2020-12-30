@@ -149,24 +149,21 @@ class MyRTMQuestProcessor(RTMServerPushMonitor):
     def __init__(self):
         pass
 
-    def print_messagee(messag):
-        print("from_uid: ", messag.from_uid)
-        print("to_id: ", messag.to_id)
+    def print_message(self, message):
+        print("from_uid: ", message.from_uid)
+        print("to_id: ", message.to_id)
         print("message_type: ", message.message_type)
         print("message_id: ", message.message_id)
         print("message: ", message.message)
         print("attrs: ", message.attrs)
         print("modified_time: ", message.modified_time)
-        if message.audio_info != None:
-            print("audio_info.source_language: ", message.audio_info.source_language)
-            print("audio_info.recognized_language: ", message.audio_info.recognized_language)
-            print("audio_info.recognized_text: ", message.audio_info.recognized_text)
-            print("audio_info.duration: ", message.audio_info.duration)
-        if message.translated_info != None:
-            print("translated_info.source_language", message.translated_info.source_language)
-            print("translated_info.target_language", message.translated_info.target_language)
-            print("translated_info.source_text", message.translated_info.source_text)
-            print("translated_info.target_text", message.translated_info.target_text)
+        if message.file_info != None:
+            print("file_info.url: ", message.file_info.url)
+            print("file_info.size: ", message.file_info.size)
+            print("file_info.surl: ", message.file_info.surl)
+            print("file_info.is_rtm_audio: ", message.file_info.is_rtm_audio)
+            print("file_info.language: ", message.file_info.language)
+            print("file_info.duration: ", message.file_info.duration)
 
     def ping(self):
         print("ping")
@@ -181,7 +178,7 @@ class MyRTMQuestProcessor(RTMServerPushMonitor):
         self.print_message(message)
 
     def push_event(self, pid, event, uid, time, endpoint, data):
-        self.print_message(message)
+        print(event)
 
     def push_file(self, message):
         self.print_message(message)

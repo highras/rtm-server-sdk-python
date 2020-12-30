@@ -21,13 +21,6 @@ class FileInfo(object):
         self.language = ""
         self.duration = 0
 
-class TranslatedInfo(object):
-    def __init__(self):
-        self.source_language = ""
-        self.target_language = ""
-        self.source_text = ""
-        self.target_text = ""
-
 class RetrievedMessage(object):
     def __init__(self):
         self.cursor_id = 0
@@ -46,7 +39,6 @@ class RTMMessage(object):
         self.message = None
         self.attrs = None
         self.modified_time = 0
-        self.translated_info = None
         self.file_info = None
 
 class HistoryMessage(RTMMessage):

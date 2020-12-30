@@ -1026,11 +1026,6 @@ if  __name__ == "__main__":
                 print("file_info.is_rtm_audio: ", message.file_info.is_rtm_audio)
                 print("file_info.language: ", message.file_info.language)
                 print("file_info.duration: ", message.file_info.duration)
-            if message.translated_info != None:
-                print("translated_info.source_language", message.translated_info.source_language)
-                print("translated_info.target_language", message.translated_info.target_language)
-                print("translated_info.source_text", message.translated_info.source_text)
-                print("translated_info.target_text", message.translated_info.target_text)
 
         def ping(self):
             print("ping")
