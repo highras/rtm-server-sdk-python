@@ -1011,7 +1011,7 @@ if  __name__ == "__main__":
         def __init__(self):
             pass
 
-        def print_messagee(self, message):
+        def print_message(self, message):
             print("from_uid: ", message.from_uid)
             print("to_id: ", message.to_id)
             print("message_type: ", message.message_type)
