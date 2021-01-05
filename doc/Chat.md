@@ -937,64 +937,191 @@ class TranslateResult(object):
 
 
 
-### profanity
+### text check
 
-##### profanity api
+##### text check api
 
 ```
-profanity(text, classify = False, uid = None, callback = None, timeout = 0)
+text_check(text, uid = None, callback = None, timeout = 0)
 ```
 
 #### params:
 
-* text: **(Required | str)**  text to profanity
-* classify: **(Optional | bool)**  whether to perform text classification detection
+* text: **(Required | str)**  text to check
 * uid: **(Optional | int)**  user id
 * callback: **(Optional | a sub-class of ProfanityCallback )**  used in async implementation
 
 ```python
-class ProfanityCallback(object):
+class TextCheckCallback(object):
     def callback(self, result, error_code):
         pass
       
 # result is:
-class ProfanityResult(object):
+class TextCheckResult(CheckResult):
     def __init__(self):
+        CheckResult.__init__(self)
         self.text = str()
-        self.classification = []
+        self.wlist = []
+
+# CheckResult is:       
+class CheckResult(object):
+    def __init__(self):
+        self.result = 0
+        self.tags = []
 ```
 
 #### return:
 
 * in async implementation, return None
 * in sync implementation:
-  * result:  **(ProfanityResult)** profanity result
+  * result:  **(TextCheckResult)** text check result
+    * result.tags: **(list<int>)** Triggered categories, such as pornography and politics, etc., see text review category for details
+    * result.wlist: **(list<str>)**  Sensitive word list
+    * result.text: **(str)**  The text content after the sensitive word filtering, the sensitive words contained in it will be replaced with *
+    * result.result: **(int)**  0: pass，2，not pass
   * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
 
 
+### image check
 
-### transcribe
-
-##### transcribe api
+##### image check api
 
 ```
-transcribe(audio, uid = None, profanity_filter = False, callback = None, timeout = 120)
+image_check(image, image_type, uid = None, callback = None, timeout = 0)
 ```
 
 #### params:
 
-* audio: **(Required | bytes)**  audio binary bytes
-* profanity_filter: **(Optional | bool)**  profanity the result
+* image: **(Required | str)**  image url or content
+* image_type: **(Required | int)**  1, url, 2, content
 * uid: **(Optional | int)**  user id
-* callback: **(Optional | a sub-class of TranscribeCallback )**  used in async implementation
+* callback: **(Optional | a sub-class of ProfanityCallback )**  used in async implementation
 
 ```python
-class TranscribeCallback(object):
+class CheckCallback(object):
     def callback(self, result, error_code):
         pass
       
-# result is:
-class TranscribeResult(object):
+# result is:  
+class CheckResult(object):
+    def __init__(self):
+        self.result = 0
+        self.tags = []
+```
+
+#### return:
+
+* in async implementation, return None
+* in sync implementation:
+  * result:  **(TextCheckResult)** text check result
+    * result.tags: **(list<int>)** Triggered categories, such as pornography and politics, etc., see text review category for details
+    * result.result: **(int)**  0: pass，2，not pass
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
+
+
+### audio check
+
+##### audio check api
+
+```
+audio_check(audio, audio_type, lang, codec = None, srate = None, uid = None, callback = None, timeout = 0)
+```
+
+#### params:
+
+* audio: **(Required | str)**  audio url or content
+* audio_type: **(Required | int)**  1, url, 2, content
+* lang: **(Required | str)**  language
+* codec: **(Optional | str)**  codec default is AMR_WB
+* srate: **(Optional | int)**  srate default is 16000
+* uid: **(Optional | int)**  user id
+* callback: **(Optional | a sub-class of CheckCallback )**  used in async implementation
+
+```python
+class CheckCallback(object):
+    def callback(self, result, error_code):
+        pass
+      
+# result is:  
+class CheckResult(object):
+    def __init__(self):
+        self.result = 0
+        self.tags = []
+```
+
+#### return:
+
+* in async implementation, return None
+* in sync implementation:
+  * result:  **(TextCheckResult)** text check result
+    * result.tags: **(list<int>)** Triggered categories, such as pornography and politics, etc., see text review category for details
+    * result.result: **(int)**  0: pass，2，not pass
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
+
+
+### video check
+
+##### video check api
+
+```
+video_check(video, video_type, video_name, uid = None, callback = None, timeout = 0)
+```
+
+#### params:
+
+* video: **(Required | str)**  video url or content
+* video_type: **(Required | int)**  1, url, 2, content
+* video_name: **(Required | str)**  video name
+* uid: **(Optional | int)**  user id
+* callback: **(Optional | a sub-class of CheckCallback )**  used in async implementation
+
+```python
+class CheckCallback(object):
+    def callback(self, result, error_code):
+        pass
+      
+# result is:  
+class CheckResult(object):
+    def __init__(self):
+        self.result = 0
+        self.tags = []
+```
+
+#### return:
+
+* in async implementation, return None
+* in sync implementation:
+  * result:  **(TextCheckResult)** text check result
+    * result.tags: **(list<int>)** Triggered categories, such as pornography and politics, etc., see text review category for details
+    * result.result: **(int)**  0: pass，2，not pass
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
+
+
+### speech to text check
+
+##### speech to text check api
+
+```
+speech_to_text(audio, audio_type, lang, codec = None, srate = None, uid = None, callback = None, timeout = 0)
+```
+
+#### params:
+
+* audio: **(Required | str)**  audio url or content
+* audio_type: **(Required | int)**  1, url, 2, content
+* lang: **(Required | str)**  language
+* codec: **(Optional | str)**  codec default is AMR_WB
+* srate: **(Optional | int)**  srate default is 16000
+* uid: **(Optional | int)**  user id
+* callback: **(Optional | a sub-class of CheckCallback )**  used in async implementation
+
+```python
+class SpeechToTextCallback(object):
+    def callback(self, result, error_code):
+        pass
+      
+# result is:  
+class SpeechToTextResult(object):
     def __init__(self):
         self.text = str()
         self.lang = str()
@@ -1004,85 +1131,7 @@ class TranscribeResult(object):
 
 * in async implementation, return None
 * in sync implementation:
-  * result:  **(TranscribeResult)** transcribe result
+  * result:  **(TextCheckResult)** text check result
+    * result.text: **(str)** text
+    * result.lang: **(str)**  language
   * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
-
-
-### transcribe_message
-
-##### transcribe with message
-
-```
-transcribe_message(self, from_uid, mid, to_id, message_type, profanity_filter = None, callback = None, timeout = 120)
-```
-
-#### params:
-
-* from_uid: **(Required | int)**  user id
-* mid: **(Required | int)**  message id
-* to_id: **(Required | int)**  rid/gid/to/0
-* message_type: **(Required | MessageType)**  message type as below:
-```
-class MessageType(Enum):
-    P2P_MESSAGE = 1
-    GROUP_MESSAGE = 2
-    ROOM_MESSAGE = 3
-    BROADCAST_MESSAGE = 4
-```
-* profanity_filter: **(Optional | bool)**  profanity the result
-* callback: **(Optional | a sub-class of TranscribeCallback )**  used in async implementation
-
-```python
-class TranscribeCallback(object):
-    def callback(self, result, error_code):
-        pass
-
-# result is:
-class TranscribeResult(object):
-    def __init__(self):
-        self.text = str()
-        self.lang = str()
-```
-
-#### return:
-
-* in async implementation, return None
-* in sync implementation:
-  * result:  **(TranscribeResult)** transcribe result
-  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
-  
-
-### profanity
-
-##### profanity api
-
-```
-profanity(text, classify = False, uid = None, callback = None, timeout = 0)
-```
-
-#### params:
-
-* text: **(Required | str)**  text to profanity
-* classify: **(Optional | bool)**  whether to perform text classification detection
-* uid: **(Optional | int)**  user id
-* callback: **(Optional | a sub-class of ProfanityCallback )**  used in async implementation
-
-```python
-class ProfanityCallback(object):
-    def callback(self, result, error_code):
-        pass
-      
-# result is:
-class ProfanityResult(object):
-    def __init__(self):
-        self.text = str()
-        self.classification = []
-```
-
-#### return:
-
-* in async implementation, return None
-* in sync implementation:
-  * result:  **(ProfanityResult)** profanity result
-  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when 
-

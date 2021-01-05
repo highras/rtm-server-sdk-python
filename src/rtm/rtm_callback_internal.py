@@ -98,9 +98,8 @@ class GetGroupMessageCallbackInternal(QuestCallback):
                 msg.attrs = m[6]
                 msg.modified_time = m[7]
 
-                if msg.message_type == ChatMessageType.AUDIO.value:
-                    msg.audio_info = build_audio_info(msg.message)
-                    msg.message = msg.audio_info.recognized_text
+                if msg.message_type >= 40 and msg.message_type <= 50:
+                    msg = RTMServerClient.build_file_info(msg)
 
                 result.messages.append(msg)
             return result, FPNN_ERROR.FPNN_EC_OK
@@ -135,9 +134,8 @@ class GetRoomMessageCallbackInternal(QuestCallback):
                 msg.attrs = m[6]
                 msg.modified_time = m[7]
 
-                if msg.message_type == ChatMessageType.AUDIO.value:
-                    msg.audio_info = build_audio_info(msg.message)
-                    msg.message = msg.audio_info.recognized_text
+                if msg.message_type >= 40 and msg.message_type <= 50:
+                    msg = RTMServerClient.build_file_info(msg)
 
                 result.messages.append(msg)
             return result, FPNN_ERROR.FPNN_EC_OK
@@ -172,9 +170,8 @@ class GetBroadcastMessageCallbackInternal(QuestCallback):
                 msg.attrs = m[6]
                 msg.modified_time = m[7]
 
-                if msg.message_type == ChatMessageType.AUDIO.value:
-                    msg.audio_info = build_audio_info(msg.message)
-                    msg.message = msg.audio_info.recognized_text
+                if msg.message_type >= 40 and msg.message_type <= 50:
+                    msg = RTMServerClient.build_file_info(msg)
 
                 result.messages.append(msg)
             return result, FPNN_ERROR.FPNN_EC_OK
@@ -217,9 +214,8 @@ class GetP2PMessageCallbackInternal(QuestCallback):
                 msg.attrs = m[6]
                 msg.modified_time = m[7]
 
-                if msg.message_type == ChatMessageType.AUDIO.value:
-                    msg.audio_info = build_audio_info(msg.message)
-                    msg.message = msg.audio_info.recognized_text
+                if msg.message_type >= 40 and msg.message_type <= 50:
+                    msg = RTMServerClient.build_file_info(msg)
 
                 result.messages.append(msg)
             return result, FPNN_ERROR.FPNN_EC_OK
@@ -267,7 +263,7 @@ class TranslateCallbackInternal(QuestCallback):
         result, error_code = self.get_result(answer)
         self.real_callback.callback(result, error_code)
 
-class ProfanityCallbackInternal(QuestCallback):
+class TextCheckCallbackInternal(QuestCallback):
     def __init__(self, real_callback):
         self.real_callback = real_callback
 
@@ -275,16 +271,19 @@ class ProfanityCallbackInternal(QuestCallback):
         if answer.is_error():
             return None, answer.error_code
         else:
-            result = ProfanityResult()
+            result = TextCheckResult()
+            result.result = answer.get("result", 0)
             result.text = answer.get("text", str())
-            result.classification = answer.get("classification", [])
+            result.tags = answer.get("tags", []
+            result.wlist = answer.get("wlist", [])
             return result, FPNN_ERROR.FPNN_EC_OK
 
     def callback(self, answer):
         result, error_code = self.get_result(answer)
         self.real_callback.callback(result, error_code)
 
-class TranscribeCallbackInternal(QuestCallback):
+
+class CheckCallbackInternal(QuestCallback):
     def __init__(self, real_callback):
         self.real_callback = real_callback
 
@@ -292,7 +291,24 @@ class TranscribeCallbackInternal(QuestCallback):
         if answer.is_error():
             return None, answer.error_code
         else:
-            result = TranscribeResult()
+            result = CheckResult()
+            result.result = answer.get("result", 0)
+            result.tags = answer.get("tags", []
+            return result, FPNN_ERROR.FPNN_EC_OK
+
+    def callback(self, answer):
+        result, error_code = self.get_result(answer)
+        self.real_callback.callback(result, error_code)
+
+class SpeechToTextCallbackInternal(QuestCallback):
+    def __init__(self, real_callback):
+        self.real_callback = real_callback
+
+    def get_result(self, answer):
+        if answer.is_error():
+            return None, answer.error_code
+        else:
+            result = SpeechToTextResult()
             result.text = answer.get("text", str())
             result.lang = answer.get("lang", str())
             return result, FPNN_ERROR.FPNN_EC_OK
@@ -499,6 +515,36 @@ class GetGroupMembersCallbackInternal(QuestCallback):
         uids, error_code = self.get_result(answer)
         self.real_callback.callback(uids, error_code)
 
+class GetRoomMembersCallbackInternal(QuestCallback):
+    def __init__(self, real_callback):
+        self.real_callback = real_callback
+
+    def get_result(self, answer):
+        if answer.is_error():
+            return None, answer.error_code
+        else:
+            uids = answer.get("uids", [])
+            return uids, FPNN_ERROR.FPNN_EC_OK
+
+    def callback(self, answer):
+        uids, error_code = self.get_result(answer)
+        self.real_callback.callback(uids, error_code)
+
+class GetRoomCountCallbackInternal(QuestCallback):
+    def __init__(self, real_callback):
+        self.real_callback = real_callback
+
+    def get_result(self, answer):
+        if answer.is_error():
+            return None, answer.error_code
+        else:
+            count = answer.get("cn", 0)
+            return count, FPNN_ERROR.FPNN_EC_OK
+
+    def callback(self, answer):
+        count, error_code = self.get_result(answer)
+        self.real_callback.callback(count, error_code)
+
 class IsGroupMemberCallbackInternal(QuestCallback):
     def __init__(self, real_callback):
         self.real_callback = real_callback
@@ -605,3 +651,20 @@ class DataGetCallbackInternal(QuestCallback):
     def callback(self, answer):
         value, error_code = self.get_result(answer)
         self.real_callback.callback(value, error_code)
+
+class GetDevicePushOptionCallbackInternal(QuestCallback):
+    def __init__(self, real_callback):
+        self.real_callback = real_callback
+
+    def get_result(self, answer):
+        if answer.is_error():
+            return None, answer.error_code
+        else:
+            result = GetDevicePushOptionResult()
+            result.p2p = answer.get("p2p", dict())
+            result.group = answer.get("group", dict())
+            return result, FPNN_ERROR.FPNN_EC_OK
+
+    def callback(self, answer):
+        result, error_code = self.get_result(answer)
+        self.real_callback.callback(result, error_code)

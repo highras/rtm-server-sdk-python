@@ -184,7 +184,7 @@ add_group_ban(gid, uid, btime, callback = None, timeout = 0)
 
 #### params:
 
-* gid: **(Required | int)**  group id
+* gid: **(Required | int)**  group id, if gid = None, is baned for all group
 * uid: **(Required | int)**  user id
 * btime: **(Optional | int)**  ban time in second
 * callback: **(Optional | a sub-class of BasicCallback )**  used in async implementation
@@ -213,7 +213,7 @@ remove_group_ban(gid, uid, callback = None, timeout = 0)
 
 #### params:
 
-* gid: **(Required | int)**  group id
+* gid: **(Required | int)**  group id, if gid = None, is removed ban for all group
 * uid: **(Required | int)**  user id
 * callback: **(Optional | a sub-class of BasicCallback )**  used in async implementation
 

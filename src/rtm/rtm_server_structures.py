@@ -71,11 +71,3 @@ class ListenStatusInfo(object):
         self.room_ids = set()
         self.events = set()
 
-def build_audio_info(msg):
-    json_data = json.loads(msg)
-    audio_info = AudioInfo()
-    audio_info.source_language = json_data.get("sl", "")
-    audio_info.recognized_language = json_data.get("rl", "")
-    audio_info.recognized_text = json_data.get("rt", "")
-    audio_info.duration = json_data.get("du", 0)
-    return audio_info

@@ -125,21 +125,31 @@ class TranslateCallback(object):
     def callback(self, result, error):
         pass
 
-class ProfanityResult(object):
+class CheckResult(object):
     def __init__(self):
-        self.text = str()
-        self.classification = []
+        self.result = 0
+        self.tags = []
 
-class ProfanityCallback(object):
+class TextCheckResult(CheckResult):
+    def __init__(self):
+        CheckResult.__init__(self)
+        self.text = str()
+        self.wlist = []
+
+class TextCheckCallback(object):
     def callback(self, result, error):
         pass
 
-class TranscribeResult(object):
+class CheckCallback(object):
+    def callback(self, result, error):
+        pass
+
+class SpeechToTextResult(object):
     def __init__(self):
         self.text = str()
         self.lang = str()
 
-class TranscribeCallback(object):
+class SpeechToTextCallback(object):
     def callback(self, result, error):
         pass
 
@@ -195,6 +205,14 @@ class GetGroupMembersCallback(object):
     def callback(self, uids, error):
         pass
 
+class GetRoomMembersCallback(object):
+    def callback(self, uids, error):
+        pass
+
+class GetRoomCountCallback(object):
+    def callback(self, count, error):
+        pass
+
 class IsGroupMemberCallback(object):
     def callback(self, ok, error):
         pass
@@ -221,4 +239,13 @@ class GetRoomInfoCallback(object):
 
 class DataGetCallback(object):
     def callback(self, value, error):
+        pass
+
+class GetDevicePushOptionResult(object):
+    def __init__(self):
+        self.p2p = dict()
+        self.group = dict()
+
+class GetDevicePushOptionCallback(object):
+    def callback(self, result, error):
         pass

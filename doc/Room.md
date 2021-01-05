@@ -130,7 +130,7 @@ add_room_ban(rid, uid, btime, callback = None, timeout = 0)
 
 #### params:
 
-* rid: **(Required | int)**  room id
+* rid: **(Required | int)**  room id, if rid = None, is baned for all room
 * uid: **(Required | int)**  user id
 * btime: **(Optional | int)**  ban time in second
 * callback: **(Optional | a sub-class of BasicCallback )**  used in async implementation
@@ -159,7 +159,7 @@ remove_room_ban(rid, uid, callback = None, timeout = 0)
 
 #### params:
 
-* rid: **(Required | int)**  room id
+* rid: **(Required | int)**  room id, if rid = None, is removed ban for all room
 * uid: **(Required | int)**  user id
 * callback: **(Optional | a sub-class of BasicCallback )**  used in async implementation
 
@@ -204,5 +204,55 @@ class IsBanOfRoomCallback(object):
   * ok:  **(bool)** is ban
   * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
+### get room members
+
+##### get room members
+
+```
+get_room_members(rid, callback = None, timeout = 0)
+```
+
+#### params:
+
+* rid: **(Required | int)**  room id
+* callback: **(Optional | a sub-class of GetRoomMembersCallback )**  used in async implementation
+
+```python
+class GetRoomMembersCallback(object):
+    def callback(self, uids, error_code):
+        pass
+```
+
+#### return:
+
+* in async implementation, return None
+* in sync implementation:
+  * uids:  **(list<int64>)** member uids list
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
+### get room members count
+
+##### get room members count
+
+```
+get_room_count(rid, callback = None, timeout = 0)
+```
+
+#### params:
+
+* rid: **(Required | int)**  room id
+* callback: **(Optional | a sub-class of GetRoomCountCallback )**  used in async implementation
+
+```python
+class GetRoomCountCallback(object):
+    def callback(self, count, error_code):
+        pass
+```
+
+#### return:
+
+* in async implementation, return None
+* in sync implementation:
+  * count:  **(list<int64>)** members count in room
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success

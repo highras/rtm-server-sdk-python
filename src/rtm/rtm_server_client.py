@@ -83,7 +83,7 @@ class RTMServerClient(object):
 
     def set_error_recorder(self, recorder):
         self.error_recorder = recorder
-        self.client.set_error_recorder(recorder)
+        self.client.set_error_recorder(recorder)    
 
     def config_callback(self):
         class RTMConnectCallbackInternal(ConnectionCallback):
@@ -125,7 +125,7 @@ class RTMServerClient(object):
             def callback(self, error_code):
                 if error_code != FPNN_ERROR.FPNN_EC_OK and self.error_recorder != None:
                     self.error_recorder.record_error("set_listen after reconnect error, code: " + str(error_code))
-                    
+
         if self.listen_status_info.all_p2p or self.listen_status_info.all_groups or self.listen_status_info.all_rooms or self.listen_status_info.all_events:
             self.set_all_listen(self.listen_status_info.all_p2p, self.listen_status_info.all_groups, self.listen_status_info.all_rooms, self.listen_status_info.all_events, MySetListenCallback())
 
@@ -295,6 +295,71 @@ class RTMServerClient(object):
             answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
+    def add_device_push_option(self, uid, option_type, xid, mtypes = None, callback = None, timeout = 0):
+        if callback != None and not isinstance(callback, BasicCallback):
+            raise Exception('callback type error')
+        ts = int(time.time())
+        salt = self.gen_mid()
+        quest = Quest('addoption', params = {
+            'pid' : self.pid,
+            'sign' : self.gen_sign(salt, 'addoption', ts),
+            'salt' : salt,
+            'ts' : ts,
+            'uid' : uid,
+            'type' : option_type,
+            'xid' : xid
+        })
+        if (mtypes != None):
+            quest.param('mtypes', mtypes)
+        callback_internal = BasicCallbackInternal(callback)
+        if callback != None:
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
+        else:
+            answer = self.client.send_quest(quest, None, timeout * 1000)
+            return callback_internal.get_result(answer)
+
+    def remove_device_push_option(self, uid, option_type, xid, mtypes = None, callback = None, timeout = 0):
+        if callback != None and not isinstance(callback, BasicCallback):
+            raise Exception('callback type error')
+        ts = int(time.time())
+        salt = self.gen_mid()
+        quest = Quest('removeoption', params = {
+            'pid' : self.pid,
+            'sign' : self.gen_sign(salt, 'removeoption', ts),
+            'salt' : salt,
+            'ts' : ts,
+            'uid' : uid,
+            'type' : option_type,
+            'xid' : xid
+        })
+        if (mtypes != None):
+            quest.param('mtypes', mtypes)
+        callback_internal = BasicCallbackInternal(callback)
+        if callback != None:
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
+        else:
+            answer = self.client.send_quest(quest, None, timeout * 1000)
+            return callback_internal.get_result(answer)
+
+    def get_device_push_option(self, uid, callback = None, timeout = 0):
+        if callback != None and not isinstance(callback, GetDevicePushOptionCallback):
+            raise Exception('callback type error')
+        ts = int(time.time())
+        salt = self.gen_mid()
+        quest = Quest('getoption', params = {
+            'pid' : self.pid,
+            'sign' : self.gen_sign(salt, 'getoption', ts),
+            'salt' : salt,
+            'ts' : ts,
+            'uid' : uid
+        })
+        callback_internal = GetDevicePushOptionCallbackInternal(callback)
+        if callback != None:
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
+        else:
+            answer = self.client.send_quest(quest, None, timeout * 1000)
+            return callback_internal.get_result(answer)
+
     def remove_token(self, uid, callback = None, timeout = 0):
         if callback != None and not isinstance(callback, BasicCallback):
             raise Exception('callback type error')
@@ -306,6 +371,27 @@ class RTMServerClient(object):
             'salt' : salt,
             'ts' : ts,
             'uid' : uid
+        })
+        callback_internal = BasicCallbackInternal(callback)
+        if callback != None:
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
+        else:
+            answer = self.client.send_quest(quest, None, timeout * 1000)
+            return callback_internal.get_result(answer)
+
+    def add_device(self, uid, app_type, device_token, callback = None, timeout = 0):
+        if callback != None and not isinstance(callback, BasicCallback):
+            raise Exception('callback type error')
+        ts = int(time.time())
+        salt = self.gen_mid()
+        quest = Quest('adddevice', params = {
+            'pid' : self.pid,
+            'sign' : self.gen_sign(salt, 'adddevice', ts),
+            'salt' : salt,
+            'ts' : ts,
+            'uid' : uid,
+            'apptype' : app_type,
+            'devicetoken' : device_token
         })
         callback_internal = BasicCallbackInternal(callback)
         if callback != None:
@@ -737,69 +823,120 @@ class RTMServerClient(object):
             answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
-    def profanity(self, text, classify = False, uid = None, callback = None, timeout = 0):
-        if callback != None and not isinstance(callback, ProfanityCallback):
+    def text_check(self, text, uid = None, callback = None, timeout = 0):
+        if callback != None and not isinstance(callback, TextCheckCallback):
             raise Exception('callback type error')
         ts = int(time.time())
         salt = self.gen_mid()
-        quest = Quest('profanity', params = {
+        quest = Quest('tcheck', params = {
             'pid' : self.pid,
-            'sign' : self.gen_sign(salt, 'profanity', ts),
+            'sign' : self.gen_sign(salt, 'tcheck', ts),
             'salt' : salt,
             'ts' : ts,
-            'text' : text,
-            'classify' : classify
+            'text' : text
         })
         if uid != None:
             quest.param('uid', uid)
-        callback_internal = ProfanityCallbackInternal(callback)
+        callback_internal = TextCheckCallbackInternal(callback)
         if callback != None:
             self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
             answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
-    def transcribe(self, audio, uid = None, profanity_filter = False, callback = None, timeout = 120):
-        if callback != None and not isinstance(callback, TranscribeCallback):
+    def image_check(self, image, image_type, uid = None, callback = None, timeout = 0):
+        if callback != None and not isinstance(callback, CheckCallback):
             raise Exception('callback type error')
         ts = int(time.time())
         salt = self.gen_mid()
-        quest = Quest('transcribe', params = {
+        quest = Quest('icheck', params = {
             'pid' : self.pid,
-            'sign' : self.gen_sign(salt, 'transcribe', ts),
+            'sign' : self.gen_sign(salt, 'icheck', ts),
             'salt' : salt,
             'ts' : ts,
-            'audio' : audio
+            'image' : image,
+            'type' : image_type
         })
-        if profanity_filter != None:
-            quest.param('profanityFilter', profanity_filter)
         if uid != None:
             quest.param('uid', uid)
-        callback_internal = TranscribeCallbackInternal(callback)
+        callback_internal = CheckCallbackInternal(callback)
         if callback != None:
             self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
             answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
-    def transcribe_message(self, from_uid, mid, to_id, message_type, profanity_filter = None, callback = None, timeout = 120):
-        if callback != None and not isinstance(callback, TranscribeCallback):
+    def audio_check(self, audio, audio_type, lang, codec = None, srate = None, uid = None, callback = None, timeout = 0):
+        if callback != None and not isinstance(callback, CheckCallback):
             raise Exception('callback type error')
         ts = int(time.time())
         salt = self.gen_mid()
-        quest = Quest('stranscribe', params = {
+        quest = Quest('acheck', params = {
             'pid' : self.pid,
-            'sign' : self.gen_sign(salt, 'transcribe', ts),
+            'sign' : self.gen_sign(salt, 'acheck', ts),
             'salt' : salt,
             'ts' : ts,
-            'from' : from_uid,
-            'mid' : mid,
-            'xid' : to_id,
-            'type' : int(message_type.value)
+            'audio' : audio,
+            'type' : audio_type,
+            'lang' : lang
         })
-        if profanity_filter != None:
-            quest.param('profanityFilter', profanity_filter)
-        callback_internal = TranscribeCallbackInternal(callback)
+        if codec != None:
+            quest.param('codec', codec)
+        if srate != None:
+            quest.param('srate', srate)
+        if uid != None:
+            quest.param('uid', uid)
+        callback_internal = CheckCallbackInternal(callback)
+        if callback != None:
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
+        else:
+            answer = self.client.send_quest(quest, None, timeout * 1000)
+            return callback_internal.get_result(answer)
+
+    def video_check(self, video, video_type, video_name, uid = None, callback = None, timeout = 0):
+        if callback != None and not isinstance(callback, CheckCallback):
+            raise Exception('callback type error')
+        ts = int(time.time())
+        salt = self.gen_mid()
+        quest = Quest('vcheck', params = {
+            'pid' : self.pid,
+            'sign' : self.gen_sign(salt, 'vcheck', ts),
+            'salt' : salt,
+            'ts' : ts,
+            'video' : video,
+            'type' : video_type,
+            'videoName' : video_name
+        })
+        if uid != None:
+            quest.param('uid', uid)
+        callback_internal = CheckCallbackInternal(callback)
+        if callback != None:
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
+        else:
+            answer = self.client.send_quest(quest, None, timeout * 1000)
+            return callback_internal.get_result(answer)
+
+    def speech_to_text(self, audio, audio_type, lang, codec = None, srate = None, uid = None, callback = None, timeout = 0):
+        if callback != None and not isinstance(callback, SpeechToTextCallback):
+            raise Exception('callback type error')
+        ts = int(time.time())
+        salt = self.gen_mid()
+        quest = Quest('speech2text', params = {
+            'pid' : self.pid,
+            'sign' : self.gen_sign(salt, 'speech2text', ts),
+            'salt' : salt,
+            'ts' : ts,
+            'audio' : audio,
+            'type' : audio_type,
+            'lang' : lang
+        })
+        if codec != None:
+            quest.param('codec', codec)
+        if srate != None:
+            quest.param('srate', srate)
+        if uid != None:
+            quest.param('uid', uid)
+        callback_internal = SpeechToTextCallbackInternal(callback)
         if callback != None:
             self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
@@ -1514,10 +1651,11 @@ class RTMServerClient(object):
             'sign' : self.gen_sign(salt, 'addgroupban', ts),
             'salt' : salt,
             'ts' : ts,
-            'gid' : gid,
             'uid' : uid,
             'btime' : btime
         })
+        if gid != None:
+            quest.param('gid', gid)
         callback_internal = BasicCallbackInternal(callback)
         if callback != None:
             self.client.send_quest(quest, callback_internal, timeout * 1000)
@@ -1535,9 +1673,10 @@ class RTMServerClient(object):
             'sign' : self.gen_sign(salt, 'removegroupban', ts),
             'salt' : salt,
             'ts' : ts,
-            'gid' : gid,
             'uid' : uid
         })
+        if gid != None:
+            quest.param('gid', gid)
         callback_internal = BasicCallbackInternal(callback)
         if callback != None:
             self.client.send_quest(quest, callback_internal, timeout * 1000)
@@ -1619,10 +1758,11 @@ class RTMServerClient(object):
             'sign' : self.gen_sign(salt, 'addroomban', ts),
             'salt' : salt,
             'ts' : ts,
-            'rid' : rid,
             'uid' : uid,
             'btime' : btime
         })
+        if rid != None:
+            quest.param('rid', rid)
         callback_internal = BasicCallbackInternal(callback)
         if callback != None:
             self.client.send_quest(quest, callback_internal, timeout * 1000)
@@ -1640,9 +1780,10 @@ class RTMServerClient(object):
             'sign' : self.gen_sign(salt, 'removeroomban', ts),
             'salt' : salt,
             'ts' : ts,
-            'rid' : rid,
             'uid' : uid
         })
+        if rid != None:
+            quest.param('rid', rid)
         callback_internal = BasicCallbackInternal(callback)
         if callback != None:
             self.client.send_quest(quest, callback_internal, timeout * 1000)
@@ -1705,6 +1846,44 @@ class RTMServerClient(object):
             'uid' : uid
         })
         callback_internal = BasicCallbackInternal(callback)
+        if callback != None:
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
+        else:
+            answer = self.client.send_quest(quest, None, timeout * 1000)
+            return callback_internal.get_result(answer)
+
+    def get_room_members(self, rid, callback = None, timeout = 0):
+        if callback != None and not isinstance(callback, GetRoomMembersCallback):
+            raise Exception('callback type error')
+        ts = int(time.time())
+        salt = self.gen_mid()
+        quest = Quest('getroommembers', params = {
+            'pid' : self.pid,
+            'sign' : self.gen_sign(salt, 'getroommembers', ts),
+            'salt' : salt,
+            'ts' : ts,
+            'rid' : rid
+        })
+        callback_internal = GetRoomMembersCallbackInternal(callback)
+        if callback != None:
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
+        else:
+            answer = self.client.send_quest(quest, None, timeout * 1000)
+            return callback_internal.get_result(answer)
+
+    def get_room_count(self, rid, callback = None, timeout = 0):
+        if callback != None and not isinstance(callback, GetRoomCountCallback):
+            raise Exception('callback type error')
+        ts = int(time.time())
+        salt = self.gen_mid()
+        quest = Quest('getroomcount', params = {
+            'pid' : self.pid,
+            'sign' : self.gen_sign(salt, 'getroomcount', ts),
+            'salt' : salt,
+            'ts' : ts,
+            'rid' : rid
+        })
+        callback_internal = GetRoomCountCallbackInternal(callback)
         if callback != None:
             self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:

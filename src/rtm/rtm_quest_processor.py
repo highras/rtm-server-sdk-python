@@ -45,15 +45,6 @@ class RTMServerPushMonitor(object):
     def push_room_chat(self, message):
         pass
 
-    def push_audio(self, message):
-        pass
-
-    def push_group_audio(self, message):
-        pass
-
-    def push_room_audio(self, message):
-        pass
-
     def push_cmd(self, message):
         pass
 
