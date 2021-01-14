@@ -249,3 +249,12 @@ class GetDevicePushOptionResult(object):
 class GetDevicePushOptionCallback(object):
     def callback(self, result, error):
         pass
+
+class GetMessageNumResult(object):
+    def __init__(self):
+        self.sender = 0
+        self.num = 0
+
+class GetMessageNumCallback(object):
+    def callback(self, result, error):
+        pass

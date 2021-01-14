@@ -538,7 +538,10 @@ class GetRoomCountCallbackInternal(QuestCallback):
         if answer.is_error():
             return None, answer.error_code
         else:
-            count = answer.get("cn", 0)
+            count = dict()
+            count_dict = answer.get("cn", dict())
+            for key in count_dict:
+                count[int(key)] = count_dict[key]
             return count, FPNN_ERROR.FPNN_EC_OK
 
     def callback(self, answer):
@@ -661,8 +664,29 @@ class GetDevicePushOptionCallbackInternal(QuestCallback):
             return None, answer.error_code
         else:
             result = GetDevicePushOptionResult()
-            result.p2p = answer.get("p2p", dict())
-            result.group = answer.get("group", dict())
+            p2p = answer.get("p2p", dict())
+            group = answer.get("group", dict())
+            for key in p2p:
+                result.p2p[int(key)] = p2p[key]
+            for key in group:
+                result.group[int(key)] = group[key]
+            return result, FPNN_ERROR.FPNN_EC_OK
+
+    def callback(self, answer):
+        result, error_code = self.get_result(answer)
+        self.real_callback.callback(result, error_code)
+
+class GetMessageNumCallbackInternal(QuestCallback):
+    def __init__(self, real_callback):
+        self.real_callback = real_callback
+
+    def get_result(self, answer):
+        if answer.is_error():
+            return None, answer.error_code
+        else:
+            result = GetMessageNumResult()
+            result.sender = answer.get("sender", 0)
+            result.num = answer.get("num", 0)
             return result, FPNN_ERROR.FPNN_EC_OK
 
     def callback(self, answer):

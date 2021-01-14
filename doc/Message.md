@@ -571,6 +571,42 @@ class GetMessageInfoCallback(object):
   * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
 
+### get_message_num
 
+##### get message num
 
+```
+get_message_num(message_type, xid, mtypes = None, begin = None, end = None, callback = None, timeout = 0)
+```
 
+#### params:
+
+* message_type: **(Required | int)**  2: group, 3: room
+* xid: **(Required | int)**  group id or room id
+* mtypes: **(Optional | [int])**  mtypes list
+* begin: **(Optional | int)**  begin timestamp in milliseconds
+* end: **(Optional | int)**  end timestamp in milliseconds
+* callback: **(Optional | a sub-class of GetMessageInfoCallback )**  used in async implementation
+
+```python
+class GetMessageNumCallback(object):
+    def callback(self, sender, num, error):
+        pass
+
+# result is:
+class GetMessageNumResult(object):
+    def __init__(self):
+        self.sender = 0
+        self.num = 0
+```
+
+#### GetMessageNumResult params: 
+ * sender is: the number of senders' userIDs that has removed duplicates.
+ * num is: is the message number.
+
+#### return:
+
+* in async implementation, return None
+* in sync implementation:
+  * result:  **(GetMessageNumResult)** message result
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success

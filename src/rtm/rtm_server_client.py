@@ -1871,7 +1871,7 @@ class RTMServerClient(object):
             answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
-    def get_room_count(self, rid, callback = None, timeout = 0):
+    def get_room_count(self, rids, callback = None, timeout = 0):
         if callback != None and not isinstance(callback, GetRoomCountCallback):
             raise Exception('callback type error')
         ts = int(time.time())
@@ -1881,7 +1881,7 @@ class RTMServerClient(object):
             'sign' : self.gen_sign(salt, 'getroomcount', ts),
             'salt' : salt,
             'ts' : ts,
-            'rid' : rid
+            'rids' : rids
         })
         callback_internal = GetRoomCountCallbackInternal(callback)
         if callback != None:
@@ -2129,6 +2129,33 @@ class RTMServerClient(object):
             'key' : key
         })
         callback_internal = BasicCallbackInternal(callback)
+        if callback != None:
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
+        else:
+            answer = self.client.send_quest(quest, None, timeout * 1000)
+            return callback_internal.get_result(answer)
+
+    def get_message_num(self, message_type, xid, mtypes = None, begin = None, end = None, callback = None, timeout = 0):
+        if callback != None and not isinstance(callback, GetMessageNumCallback):
+            raise Exception('callback type error')
+        ts = int(time.time())
+        salt = self.gen_mid()
+        quest = Quest('getmsgnum', params = {
+            'pid' : self.pid,
+            'sign' : self.gen_sign(salt, 'getmsgnum', ts),
+            'salt' : salt,
+            'ts' : ts,
+            'type' : message_type,
+            'xid' : xid
+        })
+        if mtypes != None:
+            quest.param('mtypes', mtypes)
+        if begin != None:
+            quest.param('begin', begin)
+        if end != None:
+            quest.param('end', end)
+
+        callback_internal = GetMessageNumCallbackInternal(callback)
         if callback != None:
             self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:

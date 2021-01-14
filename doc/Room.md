@@ -236,12 +236,12 @@ class GetRoomMembersCallback(object):
 ##### get room members count
 
 ```
-get_room_count(rid, callback = None, timeout = 0)
+get_room_count(rids, callback = None, timeout = 0)
 ```
 
 #### params:
 
-* rid: **(Required | int)**  room id
+* rids: **(Required | [int])**  room ids list
 * callback: **(Optional | a sub-class of GetRoomCountCallback )**  used in async implementation
 
 ```python
@@ -254,5 +254,5 @@ class GetRoomCountCallback(object):
 
 * in async implementation, return None
 * in sync implementation:
-  * count:  **(list<int64>)** members count in room
+  * count:  **(map<int, int>)** rid => members count in room
   * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
