@@ -274,7 +274,7 @@ class TextCheckCallbackInternal(QuestCallback):
             result = TextCheckResult()
             result.result = answer.get("result", 0)
             result.text = answer.get("text", str())
-            result.tags = answer.get("tags", []
+            result.tags = answer.get("tags", [])
             result.wlist = answer.get("wlist", [])
             return result, FPNN_ERROR.FPNN_EC_OK
 
@@ -293,7 +293,7 @@ class CheckCallbackInternal(QuestCallback):
         else:
             result = CheckResult()
             result.result = answer.get("result", 0)
-            result.tags = answer.get("tags", []
+            result.tags = answer.get("tags", [])
             return result, FPNN_ERROR.FPNN_EC_OK
 
     def callback(self, answer):
