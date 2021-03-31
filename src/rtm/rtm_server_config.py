@@ -1,7 +1,7 @@
 #encoding=utf8
 
 RTM_SDK_VERSION = '2.2.0'
-RTM_INTERFACE_VERSION = '2.6.1'
+RTM_INTERFACE_VERSION = '2.7.0'
 
 class RTMServerConfig(object):
     GLOBAL_CONNECT_TIMEOUT_SECONDS = 30
