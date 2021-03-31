@@ -2,11 +2,7 @@
 
 import sys
 sys.path.append("..")
-import threading
-import hashlib
-import time
-from enum import Enum
-from fpnn import *
+
 
 class RTMServerPushMonitor(object):
     def __init__(self):

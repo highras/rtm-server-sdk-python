@@ -1,8 +1,10 @@
 import sys
 sys.path.append("..")
-from fpnn import *
 from .rtm_callback import *
 from .rtm_server_structures import *
+from .rtm_error import *
+from fpnn.tcp_client import QuestCallback
+from fpnn.fpnn_error import FPNN_ERROR
 
 class GetTokenCallbackInternal(QuestCallback):
     def __init__(self, real_callback):
@@ -98,8 +100,8 @@ class GetGroupMessageCallbackInternal(QuestCallback):
                 msg.attrs = m[6]
                 msg.modified_time = m[7]
 
-                if msg.message_type >= 40 and msg.message_type <= 50:
-                    msg = RTMServerClient.build_file_info(msg)
+                if 40 <= msg.message_type <= 50:
+                    msg = FileInfo.build_file_info(msg)
 
                 result.messages.append(msg)
             return result, FPNN_ERROR.FPNN_EC_OK
@@ -135,7 +137,7 @@ class GetRoomMessageCallbackInternal(QuestCallback):
                 msg.modified_time = m[7]
 
                 if msg.message_type >= 40 and msg.message_type <= 50:
-                    msg = RTMServerClient.build_file_info(msg)
+                    msg = FileInfo.build_file_info(msg)
 
                 result.messages.append(msg)
             return result, FPNN_ERROR.FPNN_EC_OK
@@ -171,7 +173,7 @@ class GetBroadcastMessageCallbackInternal(QuestCallback):
                 msg.modified_time = m[7]
 
                 if msg.message_type >= 40 and msg.message_type <= 50:
-                    msg = RTMServerClient.build_file_info(msg)
+                    msg = FileInfo.build_file_info(msg)
 
                 result.messages.append(msg)
             return result, FPNN_ERROR.FPNN_EC_OK
@@ -215,7 +217,7 @@ class GetP2PMessageCallbackInternal(QuestCallback):
                 msg.modified_time = m[7]
 
                 if msg.message_type >= 40 and msg.message_type <= 50:
-                    msg = RTMServerClient.build_file_info(msg)
+                    msg = FileInfo.build_file_info(msg)
 
                 result.messages.append(msg)
             return result, FPNN_ERROR.FPNN_EC_OK
@@ -687,6 +689,55 @@ class GetMessageNumCallbackInternal(QuestCallback):
             result = GetMessageNumResult()
             result.sender = answer.get("sender", 0)
             result.num = answer.get("num", 0)
+            return result, FPNN_ERROR.FPNN_EC_OK
+
+    def callback(self, answer):
+        result, error_code = self.get_result(answer)
+        self.real_callback.callback(result, error_code)
+
+class GetVoiceRoomListCallbackInternal(QuestCallback):
+    def __init__(self, real_callback):
+        self.real_callback = real_callback
+
+    def get_result(self, answer):
+        if answer.is_error():
+            return None, answer.error_code
+        else:
+            result = GetVoiceRoomListResult()
+            result.room_ids = answer.get("rids", [])
+            return result, FPNN_ERROR.FPNN_EC_OK
+
+    def callback(self, answer):
+        result, error_code = self.get_result(answer)
+        self.real_callback.callback(result, error_code)
+
+class GetVoiceRoomMembersCallbackInternal(QuestCallback):
+    def __init__(self, real_callback):
+        self.real_callback = real_callback
+
+    def get_result(self, answer):
+        if answer.is_error():
+            return None, answer.error_code
+        else:
+            result = GetVoiceRoomMembersResult()
+            result.uids = answer.get("uids", [])
+            result.managers = answer.get("managers", [])
+            return result, FPNN_ERROR.FPNN_EC_OK
+
+    def callback(self, answer):
+        result, error_code = self.get_result(answer)
+        self.real_callback.callback(result, error_code)
+
+class GetVoiceRoomMemberCountCallbackInternal(QuestCallback):
+    def __init__(self, real_callback):
+        self.real_callback = real_callback
+
+    def get_result(self, answer):
+        if answer.is_error():
+            return None, answer.error_code
+        else:
+            result = GetVoiceRoomMemberCountResult()
+            result.count = answer.get("count", 0)
             return result, FPNN_ERROR.FPNN_EC_OK
 
     def callback(self, answer):

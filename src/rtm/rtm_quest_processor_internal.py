@@ -1,17 +1,14 @@
-#encoding=utf8
+# encoding=utf8
 
 import sys
 sys.path.append("..")
-import threading
-import hashlib
 import time
-from enum import Enum
 from fpnn import *
-from .rtm_quest_processor import *
 from .rtm_server_structures import *
 
 DUP_FILTER_CLEAN_INTERVAL_SECONDS = 300
 DUP_FILTER_TRIGGER_CLEAN_COUNT = 1000
+
 
 class DupP2PMessageKey():
     def __init__(self, sender, receiver, mid):
@@ -25,6 +22,7 @@ class DupP2PMessageKey():
     def __eq__(self, other):
         return (self.sender, self.receiver, self.mid) == (other.sender, other.receiver, other.mid)
 
+
 class DupGroupMessageKey():
     def __init__(self, sender, group, mid):
         self.sender = sender
@@ -37,6 +35,7 @@ class DupGroupMessageKey():
     def __eq__(self, other):
         return (self.sender, self.group, self.mid) == (other.sender, other.group, other.mid)
 
+
 class DupRoomMessageKey():
     def __init__(self, sender, room, mid):
         self.sender = sender
@@ -48,6 +47,7 @@ class DupRoomMessageKey():
 
     def __eq__(self, other):
         return (self.sender, self.room, self.mid) == (other.sender, other.room, other.mid)
+
 
 class DupMessageFilter(object):
     def __init__(self):
@@ -82,8 +82,10 @@ class DupMessageFilter(object):
                 del filter_cache[key]
         return is_dup
 
+
 class RtmQuestProcessorInternal(QuestProcessor):
     def __init__(self):
+        QuestProcessor.__init__(self)
         self.processor = None
         self.dup_filter = DupMessageFilter()
 
@@ -116,8 +118,8 @@ class RtmQuestProcessorInternal(QuestProcessor):
         message.message = msg
         message.attrs = attrs
         message.modified_time = mtime
-        if mtype >= 40 and mtype <= 50:
-            message = RTMServerClient.build_file_info(message)
+        if 40 <= mtype <= 50:
+            message = FileInfo.build_file_info(message)
         return message
 
     def pushmsg(self, connection, quest):

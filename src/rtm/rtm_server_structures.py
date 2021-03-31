@@ -20,6 +20,48 @@ class FileInfo(object):
         self.is_rtm_audio = False
         self.language = ""
         self.duration = 0
+    @staticmethod
+    def parse_file_message(message):
+        try:
+            info_dict = json.loads(message.message)
+            message.file_info.url = info_dict.get('url', '')
+            message.file_info.size = info_dict.get('size', 0)
+            message.file_info.surl = info_dict.get('surl', '')
+            message.message = None
+        except:
+            pass
+        return message
+
+    @staticmethod
+    def parse_file_attrs(message):
+        try:
+            attrs_dict = json.loads(message.attrs)
+            rtmAttrsDict = attrs_dict['rtm']
+            file_type = rtmAttrsDict.get('type', None)
+            if file_type != None and file_type == 'audiomsg':
+                message.file_info.is_rtm_audio = True
+            if message.file_info.is_rtm_audio:
+                message.file_info.language = rtmAttrsDict.get('lang', '')
+                message.file_info.duration = rtmAttrsDict.get('duration', 0)
+
+            user_attrs_dict = attrs_dict['custom']
+            try:
+                message.attrs = json.dumps(user_attrs_dict)
+            except:
+                try:
+                    message.attrs = str(user_attrs_dict)
+                except:
+                    pass
+        except:
+            pass
+        return message
+
+    @staticmethod
+    def build_file_info(message):
+        message.file_info = FileInfo()
+        message = FileInfo.parse_file_message(message)
+        message = FileInfo.parse_file_attrs(message)
+        return message
 
 class RetrievedMessage(object):
     def __init__(self):
@@ -43,6 +85,7 @@ class RTMMessage(object):
 
 class HistoryMessage(RTMMessage):
     def __init__(self):
+        RTMMessage.__init__(self)
         self.cursor_id = 0
 
 class HistoryMessageResult(object):

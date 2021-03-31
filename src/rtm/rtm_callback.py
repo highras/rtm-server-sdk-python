@@ -1,7 +1,7 @@
 #encoding=utf8
 import sys
 sys.path.append("..")
-from fpnn import *
+
 
 class RTMConnectionCallback(object):
     def connected(self, connection_id, endpoint, connected, is_reconnect):
@@ -42,15 +42,15 @@ class MessageBase(object):
         
 class GroupMessage(MessageBase):
     def __init__(self):
-        pass
+        MessageBase.__init__(self)
 
 class RoomMessage(MessageBase):
     def __init__(self):
-        pass
+        MessageBase.__init__(self)
 
 class BroadcastMessage(MessageBase):
     def __init__(self):
-        pass
+        MessageBase.__init__(self)
 
 class P2PMessage(object):
     def __init__(self):
@@ -256,5 +256,30 @@ class GetMessageNumResult(object):
         self.num = 0
 
 class GetMessageNumCallback(object):
+    def callback(self, result, error):
+        pass
+
+class GetVoiceRoomListResult(object):
+    def __init__(self):
+        self.room_ids = []
+
+class GetVoiceRoomListCallback(object):
+    def callback(self, result, error):
+        pass
+
+class GetVoiceRoomMembersResult(object):
+    def __init__(self):
+        self.uids = []
+        self.managers = []
+
+class GetVoiceRoomMembersCallback(object):
+    def callback(self, result, error):
+        pass
+
+class GetVoiceRoomMemberCountResult(object):
+    def __init__(self):
+        self.count = 0
+
+class GetVoiceRoomMemberCountCallback(object):
     def callback(self, result, error):
         pass
