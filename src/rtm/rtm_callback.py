@@ -259,27 +259,28 @@ class GetMessageNumCallback(object):
     def callback(self, result, error):
         pass
 
-class GetVoiceRoomListResult(object):
+class GetRTCRoomListResult(object):
     def __init__(self):
         self.room_ids = []
 
-class GetVoiceRoomListCallback(object):
+class GetRTCRoomListCallback(object):
     def callback(self, result, error):
         pass
 
-class GetVoiceRoomMembersResult(object):
+class GetRTCRoomMembersResult(object):
     def __init__(self):
         self.uids = []
-        self.managers = []
+        self.administrators = []
+        self.owner = -1
 
-class GetVoiceRoomMembersCallback(object):
+class GetRTCRoomMembersCallback(object):
     def callback(self, result, error):
         pass
 
-class GetVoiceRoomMemberCountResult(object):
+class GetRTCRoomMemberCountResult(object):
     def __init__(self):
         self.count = 0
 
-class GetVoiceRoomMemberCountCallback(object):
+class GetRTCRoomMemberCountCallback(object):
     def callback(self, result, error):
         pass

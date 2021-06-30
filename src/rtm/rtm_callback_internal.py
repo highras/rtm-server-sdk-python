@@ -695,7 +695,7 @@ class GetMessageNumCallbackInternal(QuestCallback):
         result, error_code = self.get_result(answer)
         self.real_callback.callback(result, error_code)
 
-class GetVoiceRoomListCallbackInternal(QuestCallback):
+class GetRTCRoomListCallbackInternal(QuestCallback):
     def __init__(self, real_callback):
         self.real_callback = real_callback
 
@@ -703,7 +703,7 @@ class GetVoiceRoomListCallbackInternal(QuestCallback):
         if answer.is_error():
             return None, answer.error_code
         else:
-            result = GetVoiceRoomListResult()
+            result = GetRTCRoomListResult()
             result.room_ids = answer.get("rids", [])
             return result, FPNN_ERROR.FPNN_EC_OK
 
@@ -711,7 +711,7 @@ class GetVoiceRoomListCallbackInternal(QuestCallback):
         result, error_code = self.get_result(answer)
         self.real_callback.callback(result, error_code)
 
-class GetVoiceRoomMembersCallbackInternal(QuestCallback):
+class GetRTCRoomMembersCallbackInternal(QuestCallback):
     def __init__(self, real_callback):
         self.real_callback = real_callback
 
@@ -719,7 +719,7 @@ class GetVoiceRoomMembersCallbackInternal(QuestCallback):
         if answer.is_error():
             return None, answer.error_code
         else:
-            result = GetVoiceRoomMembersResult()
+            result = GetRTCRoomMembersResult()
             result.uids = answer.get("uids", [])
             result.managers = answer.get("managers", [])
             return result, FPNN_ERROR.FPNN_EC_OK
@@ -728,7 +728,7 @@ class GetVoiceRoomMembersCallbackInternal(QuestCallback):
         result, error_code = self.get_result(answer)
         self.real_callback.callback(result, error_code)
 
-class GetVoiceRoomMemberCountCallbackInternal(QuestCallback):
+class GetRTCRoomMemberCountCallbackInternal(QuestCallback):
     def __init__(self, real_callback):
         self.real_callback = real_callback
 
@@ -736,7 +736,7 @@ class GetVoiceRoomMemberCountCallbackInternal(QuestCallback):
         if answer.is_error():
             return None, answer.error_code
         else:
-            result = GetVoiceRoomMemberCountResult()
+            result = GetRTCRoomMemberCountResult()
             result.count = answer.get("count", 0)
             return result, FPNN_ERROR.FPNN_EC_OK
 

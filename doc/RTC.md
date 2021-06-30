@@ -225,3 +225,31 @@ class BasicCallback(object):
 * in sync implementation:
   * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
+
+
+### admin_command
+
+##### administrator command operation
+
+```
+admin_command(self, room_id, uids, command, callback = None, timeout = 0)
+```
+
+#### params:
+
+* room_id: **(Required | int)**  room id
+* uids: **(Required | [int64])**  list to the operated uids
+* command: **(Required | int)** administrator command
+* callback: **(Optional | a sub-class of BasicCallback )**  used in async implementation
+
+```python
+class BasicCallback(object):
+    def callback(self, error_code):
+        pass
+```
+
+#### return:
+
+* in async implementation, return None
+* in sync implementation:
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success

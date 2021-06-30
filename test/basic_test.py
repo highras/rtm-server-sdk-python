@@ -966,104 +966,118 @@ def test_listen(client):
     client.set_listen(gids = [11,22,33], rids = [44,55,66], uids = [77,88,99], events = ['login','logout'], callback = MySetAllListenCallback())
 
 def test_rtc(client):
-    error_code = client.pull_into_voice_room(123456, [123, 456])
+    error_code = client.pull_into_rtc_room(123456, [123, 456], 1)
     if error_code == FPNN_ERROR.FPNN_EC_OK:
-        print("[Sync pull_into_voice_room ok]")
+        print("[Sync pull_into_rtc_room ok]")
     else:
-        print("[Sync pull_into_voice_room error_code] : " + str(error_code))
+        print("[Sync pull_into_rtc_room error_code] : " + str(error_code))
 
-    class MyPullIntoVoiceRoomCallback(BasicCallback):
+    class MyPullIntoRTCRoomCallback(BasicCallback):
         def callback(self, error_code):
             if error_code == FPNN_ERROR.FPNN_EC_OK:
-                print("[Async pull_into_voice_room ok]")
+                print("[Async pull_into_rtc_room ok]")
             else:
-                print("[Async pull_into_voice_room error_code] : " + str(error_code))
-    client.pull_into_voice_room(123456, [135, 246], MyPullIntoVoiceRoomCallback())
+                print("[Async pull_into_rtc_room error_code] : " + str(error_code))
+    client.pull_into_rtc_room(123456, [135, 246], 2, MyPullIntoRTCRoomCallback())
 
-    error_code = client.invite_user_into_voice_room(123456, [321, 654], 111)
+    error_code = client.invite_user_into_rtc_room(123456, [321, 654], 111)
     if error_code == FPNN_ERROR.FPNN_EC_OK:
-        print("[Sync invite_user_into_voice_room ok]")
+        print("[Sync invite_user_into_rtc_room ok]")
     else:
-        print("[Sync invite_user_into_voice_room error_code] : " + str(error_code))
+        print("[Sync invite_user_into_rtc_room error_code] : " + str(error_code))
 
-    class MyInviteUserIntoVoiceRoom(BasicCallback):
+    class MyInviteUserIntoRTCRoom(BasicCallback):
         def callback(self, error):
             if error == FPNN_ERROR.FPNN_EC_OK:
-                print("[Async invite_user_into_voice_room ok]")
+                print("[Async invite_user_into_rtc_room ok]")
             else:
-                print("[Async invite_user_into_voice_room error_code] : " + str(error))
-    client.invite_user_into_voice_room(123456, [531, 642], 111, MyInviteUserIntoVoiceRoom())
+                print("[Async invite_user_into_rtc_room error_code] : " + str(error))
+    client.invite_user_into_rtc_room(123456, [531, 642], 111, MyInviteUserIntoRTCRoom())
 
-    result, error_code = client.get_voice_room_list()
+    result, error_code = client.get_rtc_room_list()
     if error_code == FPNN_ERROR.FPNN_EC_OK:
-        print("[Sync get_voice_room_list ok] : room_ids=" + str(result.room_ids))
+        print("[Sync get_rtc_room_list ok] : room_ids=" + str(result.room_ids))
     else:
-        print("[Sync get_voice_room_list error_code] : " + str(error_code))
+        print("[Sync get_rtc_room_list error_code] : " + str(error_code))
 
-    class MyGetVoiceRoomList(GetVoiceRoomListCallback):
+    class MyGetRTCRoomList(GetRTCRoomListCallback):
         def callback(self, result, error):
             if error == FPNN_ERROR.FPNN_EC_OK:
-                print("[Async get_voice_room_list ok] : room_ids=" + str(result.room_ids))
+                print("[Async get_rtc_room_list ok] : room_ids=" + str(result.room_ids))
             else:
-                print("[Async get_voice_room_list error_code] : " + str(error))
-    client.get_voice_room_list(MyGetVoiceRoomList())
+                print("[Async get_rtc_room_list error_code] : " + str(error))
+    client.get_rtc_room_list(MyGetRTCRoomList())
 
-    result, error_code = client.get_voice_room_members(123456)
+    result, error_code = client.get_rtc_room_members(123456)
     if error_code == FPNN_ERROR.FPNN_EC_OK:
-        print("[Sync get_voice_room_members ok] : uids=" + str(result.uids) + " managers=" + str(result.managers))
+        print("[Sync get_rtc_room_members ok] : uids=" + str(result.uids) + " managers=" + str(result.managers))
     else:
-        print("[Sync get_voice_room_members error_code] : " + str(error_code))
+        print("[Sync get_rtc_room_members error_code] : " + str(error_code))
 
-    class MyGetVoiceRoomMembers(GetVoiceRoomMembersCallback):
+    class MyGetRTCRoomMembers(GetRTCRoomMembersCallback):
         def callback(self, result, error):
             if error == FPNN_ERROR.FPNN_EC_OK:
                 print(
-                    "[Async get_voice_room_members ok] : uids=" + str(result.uids) + " managers=" + str(result.managers))
+                    "[Async get_rtc_room_members ok] : uids=" + str(result.uids) + " managers=" + str(result.managers))
             else:
-                print("[Async get_voice_room_members error_code] : " + str(error))
-    client.get_voice_room_members(123456, MyGetVoiceRoomMembers())
+                print("[Async get_rtc_room_members error_code] : " + str(error))
+    client.get_rtc_room_members(123456, MyGetRTCRoomMembers())
 
-    result, error_code = client.get_voice_room_member_count(123456)
+    result, error_code = client.get_rtc_room_member_count(123456)
     if error_code == FPNN_ERROR.FPNN_EC_OK:
-        print("[Sync get_voice_room_member_count ok] : count=" + str(result.count))
+        print("[Sync get_rtc_room_member_count ok] : count=" + str(result.count))
     else:
-        print("[Sync get_voice_room_member_count error_code] : " + str(error_code))
+        print("[Sync get_rtc_room_member_count error_code] : " + str(error_code))
 
-    class MyGetVoiceRommMemberCount(GetVoiceRoomMemberCountCallback):
+    class MyGetRTCRommMemberCount(GetRTCRoomMemberCountCallback):
         def callback(self, result, error):
             if error == FPNN_ERROR.FPNN_EC_OK:
-                print("[Async get_voice_room_member_count ok] : count=" + str(result.count))
+                print("[Async get_rtc_room_member_count ok] : count=" + str(result.count))
             else:
-                print("[Async get_voice_room_member_count error_code] : " + str(error))
-    client.get_voice_room_member_count(123456, MyGetVoiceRommMemberCount())
+                print("[Async get_rtc_room_member_count error_code] : " + str(error))
+    client.get_rtc_room_member_count(123456, MyGetRTCRommMemberCount())
 
-    error_code = client.set_voice_room_mic_status(123456, True)
+    error_code = client.set_rtc_room_mic_status(123456, True)
     if error_code == FPNN_ERROR.FPNN_EC_OK:
-        print("[Sync set_voice_room_mic_status ok]")
+        print("[Sync set_rtc_room_mic_status ok]")
     else:
-        print("[Sync set_voice_room_mic_status error_code] : " + str(error_code))
+        print("[Sync set_rtc_room_mic_status error_code] : " + str(error_code))
 
-    class MySetVoiceRoomMiscStatus(BasicCallback):
+    class MySetRTCRoomMiscStatus(BasicCallback):
         def callback(self, error):
             if error == FPNN_ERROR.FPNN_EC_OK:
-                print("[Async set_voice_room_mic_status ok]")
+                print("[Async set_rtc_room_mic_status ok]")
             else:
-                print("[Async set_voice_room_mic_status error_code] : " + str(error))
-    client.set_voice_room_mic_status(123456, False, MySetVoiceRoomMiscStatus())
+                print("[Async set_rtc_room_mic_status error_code] : " + str(error))
+    client.set_rtc_room_mic_status(123456, False, MySetRTCRoomMiscStatus())
 
-    error_code = client.close_voice_room(123456)
+    error_code = client.admin_command(123456, [123, 456], 0)
     if error_code == FPNN_ERROR.FPNN_EC_OK:
-        print("[Sync close_voice_room ok]")
+        print("[Sync admin_command ok]")
     else:
-        print("[Sync close_voice_room error_code] : " + str(error_code))
+        print("[Sync admin_command error_code] : " + str(error_code))
 
-    class MyCloseVoiceRoom(BasicCallback):
+    class MyAdminCommand(BasicCallback):
         def callback(self, error):
             if error == FPNN_ERROR.FPNN_EC_OK:
-                print("[Async close_voice_room ok]")
+                print("[Async admin_command ok]")
             else:
-                print("[Async close_voice_room error_code] : " + str(error))
-    client.close_voice_room(123456, MyCloseVoiceRoom())
+                print("[Async admin_command error_code] : " + str(error))
+    client.admin_command(123456, [123, 456], 0, MyAdminCommand())
+
+    error_code = client.close_rtc_room(123456)
+    if error_code == FPNN_ERROR.FPNN_EC_OK:
+        print("[Sync close_rtc_room ok]")
+    else:
+        print("[Sync close_rtc_room error_code] : " + str(error_code))
+
+    class MyCloseRTCRoom(BasicCallback):
+        def callback(self, error):
+            if error == FPNN_ERROR.FPNN_EC_OK:
+                print("[Async close_rtc_room ok]")
+            else:
+                print("[Async close_rtc_room error_code] : " + str(error))
+    client.close_rtc_room(123456, MyCloseRTCRoom())
 
 class MyErrorRecorder(ErrorRecorder):
     def record_error(self, message):

@@ -114,3 +114,12 @@ class ListenStatusInfo(object):
         self.room_ids = set()
         self.events = set()
 
+class AdministratorCommand(Enum):
+    AppointAdministrator    = 0 #赋予管理员权限
+    DismissAdministrator    = 1 #剥夺管理员权限
+    ForbidSendingAudio      = 2 #禁止发送音频数据
+    AllowSendingAudio       = 3 #允许发送视频数据
+    ForbidSendingVideo      = 4 #禁止发送视频数据
+    AllowSendingVideo       = 5 #允许发送视频数据
+    CloseOthersMicroPhone   = 6 #关闭他人麦克风
+    CloseOthersMicroCamera  = 7 #关闭他人摄像头

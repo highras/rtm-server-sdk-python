@@ -2094,14 +2094,14 @@ class RTMServerClient(object):
             answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
-    def invite_user_into_voice_room(self, room_id, to_uids, from_uid, callback = None, timeout = 0):
+    def invite_user_into_rtc_room(self, room_id, to_uids, from_uid, callback = None, timeout = 0):
         if callback != None and not isinstance(callback, BasicCallback):
             raise Exception('callback type error')
         ts = int(time.time())
         salt = self.gen_mid()
-        quest = Quest('inviteUserIntoVoiceRoom', params = {
+        quest = Quest('inviteUserIntoRTCRoom', params = {
             'pid' : self.pid,
-            'sign' : self.gen_sign(salt, 'inviteUserIntoVoiceRoom', ts),
+            'sign' : self.gen_sign(salt, 'inviteUserIntoRTCRoom', ts),
             'salt' : salt,
             'ts' : ts,
             'rid' : room_id,
@@ -2116,14 +2116,14 @@ class RTMServerClient(object):
             answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
-    def close_voice_room(self, room_id, callback = None, timeout = 0):
+    def close_rtc_room(self, room_id, callback = None, timeout = 0):
         if callback != None and not isinstance(callback, BasicCallback):
             raise Exception('call back type error')
         ts = int(time.time())
         salt = self.gen_mid()
-        quest = Quest('closeVoiceRoom', params = {
+        quest = Quest('closeRTCRoom', params = {
             'pid' : self.pid,
-            'sign' : self.gen_sign(salt, 'closeVoiceRoom', ts),
+            'sign' : self.gen_sign(salt, 'closeRTCRoom', ts),
             'salt' : salt,
             'ts' : ts,
             'rid' : room_id
@@ -2136,14 +2136,14 @@ class RTMServerClient(object):
             answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
-    def kick_out_from_voice_room(self, uid, room_id, from_uid, callback = None, timeout = 0):
+    def kick_out_from_rtc_room(self, uid, room_id, from_uid, callback = None, timeout = 0):
         if callback != None and not isinstance(callback, BasicCallback):
             raise Exception('call back type error')
         ts = int(time.time())
         salt = self.gen_mid()
-        quest = Quest('kickoutFromVoiceRoom', params = {
+        quest = Quest('kickoutFromRTCRoom', params = {
             'pid' : self.pid,
-            'sign' : self.gen_sign(salt, 'kickoutFromVoiceRoom', ts),
+            'sign' : self.gen_sign(salt, 'kickoutFromRTCRoom', ts),
             'salt' : salt,
             'ts' : ts,
             'uid' : uid,
@@ -2158,73 +2158,73 @@ class RTMServerClient(object):
             answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
-    def get_voice_room_list(self, callback = None, timeout = 0):
-        if callback != None and not isinstance(callback, GetVoiceRoomListCallback):
+    def get_rtc_room_list(self, callback = None, timeout = 0):
+        if callback != None and not isinstance(callback, GetRTCRoomListCallback):
             raise Exception('callback type error')
         ts = int(time.time())
         salt = self.gen_mid()
-        quest = Quest('getVoiceRoomList', params = {
+        quest = Quest('getRTCRoomList', params = {
             'pid' : self.pid,
-            'sign' : self.gen_sign(salt, 'getVoiceRoomList', ts),
+            'sign' : self.gen_sign(salt, 'getRTCRoomList', ts),
             'salt' : salt,
             'ts' : ts
         })
 
-        callback_internal = GetVoiceRoomListCallbackInternal(callback)
+        callback_internal = GetRTCRoomListCallbackInternal(callback)
         if callback != None:
             self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
             answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
-    def get_voice_room_members(self, room_id, callback = None, timeout = 0):
-        if callback != None and not isinstance(callback, GetVoiceRoomMembersCallback):
+    def get_rtc_room_members(self, room_id, callback = None, timeout = 0):
+        if callback != None and not isinstance(callback, GetRTCRoomMembersCallback):
             raise Exception('callback type error')
         ts = int(time.time())
         salt = self.gen_mid()
-        quest = Quest('getVoiceRoomMembers', params = {
+        quest = Quest('getRTCRoomMembers', params = {
             'pid' : self.pid,
-            'sign' : self.gen_sign(salt, 'getVoiceRoomMembers', ts),
+            'sign' : self.gen_sign(salt, 'getRTCRoomMembers', ts),
             'salt' : salt,
             'ts' : ts,
             'rid' : room_id
         })
 
-        callback_internal = GetVoiceRoomMembersCallbackInternal(callback)
+        callback_internal = GetRTCRoomMembersCallbackInternal(callback)
         if callback != None:
             self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
             answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
-    def get_voice_room_member_count(self, room_id, callback = None, timeout = 0):
-        if callback != None and not isinstance(callback, GetVoiceRoomMemberCountCallback):
+    def get_rtc_room_member_count(self, room_id, callback = None, timeout = 0):
+        if callback != None and not isinstance(callback, GetRTCRoomMemberCountCallback):
             raise Exception('callback type error')
         ts = int(time.time())
         salt = self.gen_mid()
-        quest = Quest('getVoiceRoomMemberCount', params = {
+        quest = Quest('getRTCRoomMemberCount', params = {
             'pid' : self.pid,
-            'sign' : self.gen_sign(salt, 'getVoiceRoomMemberCount', ts),
+            'sign' : self.gen_sign(salt, 'getRTCRoomMemberCount', ts),
             'salt' : salt,
             'ts' : ts,
             'rid' : room_id
         })
 
-        callback_internal = GetVoiceRoomMemberCountCallbackInternal(callback)
+        callback_internal = GetRTCRoomMemberCountCallbackInternal(callback)
         if callback != None:
             self.client.send_quest(quest, callback_internal, timeout * 1000)
         else:
             answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
-    def set_voice_room_mic_status(self, room_id, status, callback = None, timeout = 0):
+    def set_rtc_room_mic_status(self, room_id, status, callback = None, timeout = 0):
         if callback != None and not isinstance(callback, BasicCallback):
             raise Exception('call back type error')
         ts = int(time.time())
         salt = self.gen_mid()
-        quest = Quest('setVoiceRoomMicStatus', params = {
+        quest = Quest('setRTCRoomMicStatus', params = {
             'pid' : self.pid,
-            'sign' : self.gen_sign(salt, 'setVoiceRoomMicStatus', ts),
+            'sign' : self.gen_sign(salt, 'setRTCRoomMicStatus', ts),
             'salt' : salt,
             'ts' : ts,
             'rid' : room_id,
@@ -2238,18 +2238,41 @@ class RTMServerClient(object):
             answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
 
-    def pull_into_voice_room(self, room_id, to_uids, callback = None, timeout = 0):
+    def pull_into_rtc_room(self, room_id, to_uids, type, callback = None, timeout = 0):
         if callback != None and not isinstance(callback, BasicCallback):
             raise Exception('call back type error')
         ts = int(time.time())
         salt = self.gen_mid()
-        quest = Quest('pullIntoVoiceRoom', params = {
+        quest = Quest('pullIntoRTCRoom', params = {
             'pid' : self.pid,
-            'sign' : self.gen_sign(salt, 'pullIntoVoiceRoom', ts),
+            'sign' : self.gen_sign(salt, 'pullIntoRTCRoom', ts),
             'salt' : salt,
             'ts' : ts,
             'rid' : room_id,
-            'toUids' : to_uids
+            'toUids' : to_uids,
+            'type' : type
+        })
+
+        callback_internal = BasicCallbackInternal(callback)
+        if callback != None:
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
+        else:
+            answer = self.client.send_quest(quest, None, timeout * 1000)
+            return callback_internal.get_result(answer)
+
+    def admin_command(self, room_id, uids, command, callback = None, timeout = 0):
+        if callback != None and not isinstance(callback, BasicCallback):
+            raise Exception('call back type error')
+        ts = int(time.time())
+        salt = self.gen_mid()
+        quest = Quest('adminCommand', params={
+            'pid': self.pid,
+            'sign': self.gen_sign(salt, 'adminCommand', ts),
+            'salt': salt,
+            'ts': ts,
+            'rid': room_id,
+            'uids': uids,
+            'command': command
         })
 
         callback_internal = BasicCallbackInternal(callback)
