@@ -985,14 +985,14 @@ class RTMServerClient(object):
             quest.param('rid', send_file_info.to_id)
         if send_file_info.send_type == 'sendgroupfile':
             quest.param('gid', send_file_info.to_id)
-        attrs = '{"sign":"' + sign + '"'
+        attrs = '{"rtm":{"sign":"' + sign + '"'
         ext = ''
         idx = send_file_info.file_path.rfind('.')
         if idx >= 0:
             ext = send_file_info.file_path[idx + 1:]
         if len(ext) > 0:
             attrs += ', "ext":"' + ext + '"'
-        attrs += '}'
+        attrs += '}}'
         quest.param('attrs', attrs)
         return quest
     
