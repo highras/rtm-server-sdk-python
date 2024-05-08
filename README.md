@@ -139,6 +139,20 @@ def set_error_recorder(self, recorder)
 
 * set error recorder
 
+#### close
+
+```python
+def close(self)
+```
+
+* close connection
+
+#### destory
+
+```python
+def destory(self)
+```
+* destory all resource
 
 ## API
 
