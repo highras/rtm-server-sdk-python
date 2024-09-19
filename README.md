@@ -154,6 +154,12 @@ def destory(self)
 ```
 * destory all resource
 
+#### ClientEngine.destory()
+```python
+ClientEngine.destory()
+```
+* call ClientEngine.destory() will destory all resources, need to call before program quit
+
 ## API
 
 ### common params
