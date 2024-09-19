@@ -16,7 +16,7 @@ from cryptography import utils
 
 __all__ = ('ConnectionCallback', 'QuestCallback', 'QuestProcessor', 'TCPClient', 'FPNN_SDK_VERSION')
 
-FPNN_SDK_VERSION = '2.0.6'
+FPNN_SDK_VERSION = '2.0.7'
 
 class ConnectionStatus(Enum):
     NoConnected = 1
@@ -266,5 +266,4 @@ class TCPClient(object):
 
     def destory(self):
         self.close()
-        self.engine.stop()
 

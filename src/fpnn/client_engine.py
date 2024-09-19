@@ -16,12 +16,27 @@ class ReadySocketInfo(object):
         self.can_write = write
 
 class ClientEngine(object):
+    _instance_lock = threading.Lock()
     error_recorder = None
+	
+	def __new__(cls, *args, **kw):
+       return ClientEngine.initInstance(args, kw)
+
+    def init(cls, *args, **kw):
+        if not hasattr(ClientEngine, "_instance"):
+            with ClientEngine._instance_lock:
+                if not hasattr(ClientEngine, "_instance"):
+                    ClientEngine._instance = object.__new__(cls)  
+                    ClientEngine._instance.initReal()
+        return ClientEngine._instance
+
+    def destory(cls, *args, **kw):
+        ClientEngine._instance.stop()
 
     def __init__(self):
-        self.init()
+		pass
 
-    def init(self):
+    def initReal(self):
         self.running = True
         self.loop_thread = None
         self.lock = threading.Lock()
