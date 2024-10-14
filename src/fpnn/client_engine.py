@@ -96,66 +96,76 @@ class ClientEngine(object):
 
         all_socket = set()
         want_write_socket = set()
-        
+        loopTime = int(time.time() * 1000)
+ 
         while self.running:
-            with self.lock:
-                for s in all_socket:
-                    if s in self.quit_socket_set:
-                        continue
-                    try:
-                        selector.unregister(s)
-                    except KeyError:
-                        pass
-                    if s in want_write_socket:
-                        selector.register(
-                            s,
-                            selectors.EVENT_READ | selectors.EVENT_WRITE,
-                        )
-                    else:
-                        selector.register(
-                            s,
-                            selectors.EVENT_READ,
-                        )
+            now = int(time.time() * 1000)
+            if (now - loopTime < 1):
+                time.sleep(0.001)
+            loopTime = now
+            
+            try:
+                with self.lock:
+                    for s in all_socket:
+                        if s in self.quit_socket_set:
+                            continue
+                        try:
+                            selector.unregister(s)
+                        except KeyError:
+                            pass
+                        if s in want_write_socket:
+                            selector.register(
+                                s,
+                                selectors.EVENT_READ | selectors.EVENT_WRITE,
+                            )
+                        else:
+                            selector.register(
+                                s,
+                                selectors.EVENT_READ,
+                            )
 
-            ready_socket_set = set()
-            for key, mask in selector.select():
-                if key.fileobj == self.read_notify_fd:
-                    self.consume_notify()
+                ready_socket_set = set()
+                #for key, mask in selector.select(timeout=1):
+                for key, mask in selector.select():
+                    if key.fileobj == self.read_notify_fd:
+                        self.consume_notify()
+
+                    if not self.running:
+                        break
+
+                    canRead = False
+                    canWrite = False
+                    if mask & selectors.EVENT_READ and key.fileobj != self.read_notify_fd:
+                        canRead = True
+
+                    if mask & selectors.EVENT_WRITE and key.fileobj != self.read_notify_fd:
+                        canWrite = True
+ 
+                    if canRead or canWrite:
+                        ready_socket_set.add(ReadySocketInfo(key.fileobj, canRead, canWrite))
 
                 if not self.running:
                     break
 
-                canRead = False
-                canWrite = False
-                if mask & selectors.EVENT_READ and key.fileobj != self.read_notify_fd:
-                    canRead = True
+                for s in ready_socket_set:
+                    self.process_connection_io(s)
 
-                if mask & selectors.EVENT_WRITE and key.fileobj != self.read_notify_fd:
-                    canWrite = True
-                
-                if canRead or canWrite:
-                    ready_socket_set.add(ReadySocketInfo(key.fileobj, canRead, canWrite))
+                with self.lock:
+                    if len(self.new_socket_set) > 0:
+                        all_socket.update(self.new_socket_set)
+                        self.new_socket_set.clear()
 
-            if not self.running:
-                break
+                    if len(self.quit_socket_set) > 0:
+                        for s in self.quit_socket_set:
+                            all_socket.remove(s)
+                        self.quit_socket_set.clear()
 
-            for s in ready_socket_set:
-                self.process_connection_io(s)
-
-            with self.lock:
-                if len(self.new_socket_set) > 0:
-                    all_socket.update(self.new_socket_set)
-                    self.new_socket_set.clear()
-
-                if len(self.quit_socket_set) > 0:
-                    for s in self.quit_socket_set:
-                        all_socket.remove(s)
-                    self.quit_socket_set.clear()
-
-            with self.want_write_lock:
-                want_write_socket.clear()
-                if len(self.want_write_socket_set) > 0:
-                    want_write_socket.update(self.want_write_socket_set)
+                with self.want_write_lock:
+                    want_write_socket.clear()
+                    if len(self.want_write_socket_set) > 0:
+                        want_write_socket.update(self.want_write_socket_set)
+            except:
+                time.sleep(0.1)
 
     def process_connection_io(self, si):
         with self.lock:
