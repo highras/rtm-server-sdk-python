@@ -229,3 +229,24 @@ class GetUserOpenInfoCallback(object):
   * info:  **(dict)** public info
   * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
+```
+clear_user_message(uid, callback = None, timeout = 0)
+```
+
+#### params:
+
+* uid: **(Required | int)**  user id
+* callback: **(Optional | a sub-class of GetUserOpenInfoCallback )**  used in async implementation
+
+```python
+class BasicCallback(object):
+    def callback(self, error_code):
+        pass
+```
+
+#### return:
+
+* in async implementation, return None
+* in sync implementation:
+  * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
+

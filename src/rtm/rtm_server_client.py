@@ -2281,3 +2281,23 @@ class RTMServerClient(object):
         else:
             answer = self.client.send_quest(quest, None, timeout * 1000)
             return callback_internal.get_result(answer)
+        
+    def clear_user_message(self, uid, callback = None, timeout = 0):
+        if callback != None and not isinstance(callback, BasicCallback):
+            raise Exception('call back type error')
+        ts = int(time.time())
+        salt = self.gen_mid()
+        quest = Quest('clearusermessage', params={
+            'pid': self.pid,
+            'sign': self.gen_sign(salt, 'adminCommand', ts),
+            'salt': salt,
+            'ts': ts,
+            'uid': uid
+        })
+
+        callback_internal = BasicCallbackInternal(callback)
+        if callback != None:
+            self.client.send_quest(quest, callback_internal, timeout * 1000)
+        else:
+            answer = self.client.send_quest(quest, None, timeout * 1000)
+            return callback_internal.get_result(answer)
