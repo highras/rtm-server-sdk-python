@@ -229,6 +229,10 @@ class GetUserOpenInfoCallback(object):
   * info:  **(dict)** public info
   * error_code:  **(int)**   the error code when quest is fail, or FPNN_ERROR.FPNN_EC_OK when success
 
+### clear_user_message
+
+##### clear user message
+
 ```
 clear_user_message(uid, callback = None, timeout = 0)
 ```
