@@ -2287,7 +2287,7 @@ class RTMServerClient(object):
             raise Exception('call back type error')
         ts = int(time.time())
         salt = self.gen_mid()
-        quest = Quest('clearusermessage', params={
+        quest = Quest('clearusermsg', params={
             'pid': self.pid,
             'sign': self.gen_sign(salt, 'adminCommand', ts),
             'salt': salt,
