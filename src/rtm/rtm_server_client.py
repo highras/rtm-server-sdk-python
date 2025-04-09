@@ -2289,7 +2289,7 @@ class RTMServerClient(object):
         salt = self.gen_mid()
         quest = Quest('clearusermsg', params={
             'pid': self.pid,
-            'sign': self.gen_sign(salt, 'adminCommand', ts),
+            'sign': self.gen_sign(salt, 'clearusermsg', ts),
             'salt': salt,
             'ts': ts,
             'uid': uid
